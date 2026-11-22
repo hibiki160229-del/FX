@@ -5,3 +5,4 @@ export { macd } from "./macd";
 export type { MacdPoint } from "./macd";
 export { bollinger } from "./bollinger";
 export type { BollingerPoint } from "./bollinger";
+export { atr, latestAtr } from "./atr";

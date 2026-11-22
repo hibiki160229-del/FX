@@ -2,9 +2,11 @@
 
 import { AutoAnalysis } from "@/components/AutoAnalysis";
 import { CandlestickChart } from "@/components/CandlestickChart";
+import { EntryAlerts } from "@/components/EntryAlerts";
 import { IndicatorToggles } from "@/components/IndicatorToggles";
 import { PaperTrading } from "@/components/PaperTrading";
 import { SignalHints } from "@/components/SignalHints";
+import { buildEntryAlerts } from "@/lib/alerts";
 import { loadSignalRuleSet } from "@/lib/analysis";
 import type { OhlcvPayload } from "@/lib/data/fetch-ohlcv";
 import { loadPaperState } from "@/lib/paper/storage";
@@ -46,6 +48,10 @@ export function TradingDesk({ initial }: Props) {
     () => evaluateSignals(payload.bars, ruleSet),
     [payload.bars, ruleSet],
   );
+  const entryAlerts = useMemo(
+    () => buildEntryAlerts(hints, payload.bars, mark),
+    [hints, payload.bars, mark],
+  );
   const bias = latestBias(hints);
 
   const refresh = async () => {
@@ -78,6 +84,14 @@ export function TradingDesk({ initial }: Props) {
               {bias.side === "long" ? "買い優勢" : "売り優勢"}
             </span>
           )}
+          {entryAlerts[0] && (
+            <a
+              className={`desk__bias desk__bias--${entryAlerts[0].side}`}
+              href="#entry-alerts"
+            >
+              {entryAlerts[0].labelJa}タイミングあり
+            </a>
+          )}
         </div>
         <button
           type="button"
@@ -89,6 +103,8 @@ export function TradingDesk({ initial }: Props) {
         </button>
       </header>
 
+      <EntryAlerts alerts={entryAlerts} />
+
       <IndicatorToggles value={indicators} onChange={setIndicators} />
 
       <div className="desk__chart-wrap">
@@ -98,7 +114,7 @@ export function TradingDesk({ initial }: Props) {
       <section id="auto-analysis" className="desk__panel desk__panel--wide">
         <h2>常時自動分析</h2>
         <p className="desk__panel-lead">
-          バックグラウンドで履歴データを定期評価し、通過したルールを自動でシグナルに載せます。チャート解釈は不要です。
+          バックグラウンドで履歴データを定期評価し、通過したルールを自動でシグナルに載せます。エントリーアラートも同じルール層から更新されます。
         </p>
         <AutoAnalysis ruleSet={ruleSet} onRuleSetChange={setRuleSet} />
       </section>
@@ -115,10 +131,15 @@ export function TradingDesk({ initial }: Props) {
         <section className="desk__panel">
           <h2>ペーパー取引</h2>
           <p className="desk__panel-lead">
-            仮想資金での成行売買。残高・建玉・損益はブラウザに保存されます。シグナルと同じルール層を参照します。
+            仮想資金での成行売買。建玉には ATR／% ベースの参考利確・損切を表示します。
           </p>
           {paper ? (
-            <PaperTrading state={paper} mark={mark} onChange={setPaper} />
+            <PaperTrading
+              state={paper}
+              mark={mark}
+              bars={payload.bars}
+              onChange={setPaper}
+            />
           ) : (
             <p className="paper__empty">口座を準備中…</p>
           )}

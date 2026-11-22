@@ -1,5 +1,6 @@
 "use client";
 
+import { levelsForPosition } from "@/lib/alerts";
 import {
   closePosition,
   equity,
@@ -7,12 +8,13 @@ import {
   unrealizedPnl,
 } from "@/lib/paper/broker";
 import { resetPaperState, savePaperState } from "@/lib/paper/storage";
-import type { PaperState } from "@/lib/types";
+import type { OhlcvBar, PaperState } from "@/lib/types";
 import { useState } from "react";
 
 type Props = {
   state: PaperState;
   mark: number;
+  bars: OhlcvBar[];
   onChange: (next: PaperState) => void;
 };
 
@@ -24,7 +26,7 @@ function yen(n: number) {
   }).format(n);
 }
 
-export function PaperTrading({ state, mark, onChange }: Props) {
+export function PaperTrading({ state, mark, bars, onChange }: Props) {
   const [lots, setLots] = useState(1);
   const [flash, setFlash] = useState<string | null>(null);
   const upnl = unrealizedPnl(state.positions, mark);
@@ -47,11 +49,12 @@ export function PaperTrading({ state, mark, onChange }: Props) {
       window.setTimeout(() => setFlash(null), 2200);
       return;
     }
+    const levels = levelsForPosition(side, mark, bars);
     commit(
       next,
       side === "buy"
-        ? `成行買い ${size} lot @ ${mark.toFixed(3)}`
-        : `成行売り ${size} lot @ ${mark.toFixed(3)}`,
+        ? `成行買い ${size} lot @ ${mark.toFixed(3)}（参考 利確 ${levels.takeProfit.toFixed(3)} / 損切 ${levels.stopLoss.toFixed(3)}）`
+        : `成行売り ${size} lot @ ${mark.toFixed(3)}（参考 利確 ${levels.takeProfit.toFixed(3)} / 損切 ${levels.stopLoss.toFixed(3)}）`,
     );
   };
 
@@ -125,15 +128,48 @@ export function PaperTrading({ state, mark, onChange }: Props) {
                 const dir = p.side === "buy" ? 1 : -1;
                 const pnl =
                   (mark - p.entryPrice) * dir * (p.lots * 100_000);
+                const levels = levelsForPosition(p.side, p.entryPrice, bars);
+                const hitTp =
+                  p.side === "buy"
+                    ? mark >= levels.takeProfit
+                    : mark <= levels.takeProfit;
+                const hitSl =
+                  p.side === "buy"
+                    ? mark <= levels.stopLoss
+                    : mark >= levels.stopLoss;
                 return (
                   <li key={p.id}>
-                    <div>
-                      <strong>{p.side === "buy" ? "買" : "売"}</strong>{" "}
-                      {p.lots} lot @ {p.entryPrice.toFixed(3)}
-                      <span className={pnl >= 0 ? "is-up" : "is-down"}>
-                        {" "}
-                        {yen(pnl)}
-                      </span>
+                    <div className="paper__pos">
+                      <div>
+                        <strong>{p.side === "buy" ? "買" : "売"}</strong>{" "}
+                        {p.lots} lot @ {p.entryPrice.toFixed(3)}
+                        <span className={pnl >= 0 ? "is-up" : "is-down"}>
+                          {" "}
+                          {yen(pnl)}
+                        </span>
+                      </div>
+                      <p className="paper__tpsl">
+                        参考 利確{" "}
+                        <span className={hitTp ? "is-up" : undefined}>
+                          {levels.takeProfit.toFixed(3)}
+                        </span>
+                        {" / "}
+                        損切{" "}
+                        <span className={hitSl ? "is-down" : undefined}>
+                          {levels.stopLoss.toFixed(3)}
+                        </span>
+                        <span className="paper__tpsl-r">
+                          {" "}
+                          · {levels.rewardR}R
+                          {levels.method === "atr" ? " · ATR" : " · %"}
+                        </span>
+                        {hitTp && (
+                          <span className="paper__hint is-up"> 利確圏</span>
+                        )}
+                        {hitSl && !hitTp && (
+                          <span className="paper__hint is-down"> 損切圏</span>
+                        )}
+                      </p>
                     </div>
                     <button
                       type="button"
