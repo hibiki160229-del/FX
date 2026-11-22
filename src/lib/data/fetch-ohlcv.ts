@@ -1,6 +1,9 @@
 import type { OhlcvBar } from "@/lib/types";
 import { generateMockOhlcv } from "./mock-ohlcv";
 
+/** In-memory OHLCV cache TTL — guards Yahoo / analyze / page fan-out. */
+export const OHLCV_CACHE_TTL_MS = 60 * 1000;
+
 export type OhlcvPayload = {
   bars: OhlcvBar[];
   source: "yahoo" | "sample";
@@ -26,9 +29,24 @@ type YahooChart = {
   };
 };
 
-export async function fetchUsdJpyOhlcv(
-  range = "1mo",
-  interval = "1h",
+type CacheEntry = { payload: OhlcvPayload; expiresAt: number };
+
+const g = globalThis as typeof globalThis & {
+  __enmyakuOhlcvCache?: Map<string, CacheEntry>;
+};
+
+function cacheMap(): Map<string, CacheEntry> {
+  if (!g.__enmyakuOhlcvCache) g.__enmyakuOhlcvCache = new Map();
+  return g.__enmyakuOhlcvCache;
+}
+
+function cacheKey(range: string, interval: string) {
+  return `${range}|${interval}`;
+}
+
+async function fetchUsdJpyOhlcvUncached(
+  range: string,
+  interval: string,
 ): Promise<OhlcvPayload> {
   try {
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/USDJPY=X?interval=${encodeURIComponent(interval)}&range=${encodeURIComponent(range)}`;
@@ -86,4 +104,21 @@ export async function fetchUsdJpyOhlcv(
       asOf: Date.now(),
     };
   }
+}
+
+export async function fetchUsdJpyOhlcv(
+  range = "1mo",
+  interval = "1h",
+): Promise<OhlcvPayload> {
+  const key = cacheKey(range, interval);
+  const map = cacheMap();
+  const hit = map.get(key);
+  const now = Date.now();
+  if (hit && hit.expiresAt > now) {
+    return hit.payload;
+  }
+
+  const payload = await fetchUsdJpyOhlcvUncached(range, interval);
+  map.set(key, { payload, expiresAt: now + OHLCV_CACHE_TTL_MS });
+  return payload;
 }

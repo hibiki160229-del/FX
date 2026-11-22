@@ -96,9 +96,9 @@ export function TradingDesk({ initial }: Props) {
       </div>
 
       <section id="auto-analysis" className="desk__panel desk__panel--wide">
-        <h2>自動分析</h2>
+        <h2>常時自動分析</h2>
         <p className="desk__panel-lead">
-          履歴データでルールを評価・順位付けし、成績の良いパラメータをシグナルに載せます。チャート解釈は不要です。
+          バックグラウンドで履歴データを定期評価し、通過したルールを自動でシグナルに載せます。チャート解釈は不要です。
         </p>
         <AutoAnalysis ruleSet={ruleSet} onRuleSetChange={setRuleSet} />
       </section>

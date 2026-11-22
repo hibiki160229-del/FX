@@ -16,11 +16,11 @@ export default async function Home() {
           </p>
           <h1 className="hero__headline">ドル円の流れを、静かに読む。</h1>
           <p className="hero__lead">
-            履歴でルールを自動評価し、成績の良いシグナルだけを載せます。チャートと仮想取引もそのまま使えます。
+            常時分析が履歴でルールを回し続け、成績の良いシグナルだけを載せます。チャートと仮想取引もそのまま使えます。
           </p>
           <div className="hero__cta">
             <a className="btn btn--primary" href="#auto-analysis">
-              自動分析を開く
+              常時分析の状態を見る
             </a>
             <a className="btn btn--ghost" href="#desk">
               チャート・ペーパー取引へ
