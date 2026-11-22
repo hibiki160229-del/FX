@@ -10,7 +10,7 @@ export function SignalHints({ hints }: Props) {
   if (hints.length === 0) {
     return (
       <p className="signal-empty">
-        現在バーでは明確なルール条件は発火していません。指標を切り替えつつ相場を観察してください。
+        現在バーでは明確なルール条件は発火していません。自動分析で採用したルールが条件を満たすとここに表示されます。
       </p>
     );
   }

@@ -17,9 +17,9 @@ const body = Noto_Sans_JP({
 });
 
 export const metadata: Metadata = {
-  title: "円脈 ENMYAKU — USD/JPY テクニカル＆ペーパー取引",
+  title: "円脈 ENMYAKU — USD/JPY 自動分析＆ペーパー取引",
   description:
-    "USD/JPY のローソク足・テクニカル指標・シグナルヒント・仮想取引。自動売買は後続。",
+    "USD/JPY の履歴バックテストでルールを自動評価し、シグナルと仮想取引に反映。自動発注は後続。",
 };
 
 export default function RootLayout({
