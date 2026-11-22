@@ -26,12 +26,33 @@ function yen(n: number) {
 
 export function PaperTrading({ state, mark, onChange }: Props) {
   const [lots, setLots] = useState(1);
+  const [flash, setFlash] = useState<string | null>(null);
   const upnl = unrealizedPnl(state.positions, mark);
   const eq = equity(state, mark);
 
-  const commit = (next: PaperState) => {
+  const commit = (next: PaperState, message?: string) => {
     savePaperState(next);
     onChange(next);
+    if (message) {
+      setFlash(message);
+      window.setTimeout(() => setFlash(null), 2200);
+    }
+  };
+
+  const trade = (side: "buy" | "sell") => {
+    const size = Math.max(0.1, Number(lots) || 0.1);
+    const next = openMarket(state, side, size, mark);
+    if (next === state) {
+      setFlash("注文を受け付けられませんでした（レートまたはロットを確認）");
+      window.setTimeout(() => setFlash(null), 2200);
+      return;
+    }
+    commit(
+      next,
+      side === "buy"
+        ? `成行買い ${size} lot @ ${mark.toFixed(3)}`
+        : `成行売り ${size} lot @ ${mark.toFixed(3)}`,
+    );
   };
 
   return (
@@ -69,25 +90,29 @@ export function PaperTrading({ state, mark, onChange }: Props) {
         <button
           type="button"
           className="btn btn--buy"
-          onClick={() => commit(openMarket(state, "buy", lots, mark))}
+          data-testid="paper-buy"
+          onClick={() => trade("buy")}
         >
           成行買い
         </button>
         <button
           type="button"
           className="btn btn--sell"
-          onClick={() => commit(openMarket(state, "sell", lots, mark))}
+          data-testid="paper-sell"
+          onClick={() => trade("sell")}
         >
           成行売り
         </button>
         <button
           type="button"
           className="btn btn--ghost"
-          onClick={() => commit(resetPaperState())}
+          data-testid="paper-reset"
+          onClick={() => commit(resetPaperState(), "口座をリセットしました")}
         >
           リセット
         </button>
       </div>
+      {flash && <p className="paper__flash" role="status">{flash}</p>}
 
       <div className="paper__cols">
         <section>
@@ -113,7 +138,13 @@ export function PaperTrading({ state, mark, onChange }: Props) {
                     <button
                       type="button"
                       className="btn btn--ghost btn--sm"
-                      onClick={() => commit(closePosition(state, p.id, mark))}
+                      data-testid="paper-close"
+                      onClick={() =>
+                        commit(
+                          closePosition(state, p.id, mark),
+                          `決済 @ ${mark.toFixed(3)}`,
+                        )
+                      }
                     >
                       決済
                     </button>

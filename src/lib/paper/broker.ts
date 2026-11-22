@@ -31,10 +31,11 @@ export function openMarket(
   lots: number,
   price: number,
 ): PaperState {
-  if (lots <= 0 || !Number.isFinite(price)) return state;
+  if (lots <= 0 || !Number.isFinite(price) || price <= 0) return state;
 
-  const cost = lots * LOT_JPY_NOTIONAL * 0.02; // tiny paper margin lock
-  if (state.balance < cost) return state;
+  // Soft risk cap: refuse if notional would exceed 50× cash (paper only).
+  const notional = lots * LOT_JPY_NOTIONAL;
+  if (notional > state.balance * 50) return state;
 
   const position: Position = {
     id: uid("pos"),
@@ -55,25 +56,24 @@ export function openMarket(
   };
 
   return {
-    balance: state.balance - cost,
+    balance: state.balance,
     positions: [...state.positions, position],
     history: [entry, ...state.history].slice(0, 100),
     updatedAt: Date.now(),
   };
 }
 
-/** Close one position at mark; realize PnL back to balance. */
+/** Close one position at mark; realize PnL into cash balance. */
 export function closePosition(
   state: PaperState,
   positionId: string,
   mark: number,
 ): PaperState {
   const pos = state.positions.find((p) => p.id === positionId);
-  if (!pos) return state;
+  if (!pos || !Number.isFinite(mark)) return state;
 
   const dir = pos.side === "buy" ? 1 : -1;
   const pnl = (mark - pos.entryPrice) * dir * (pos.lots * LOT_JPY_NOTIONAL);
-  const marginBack = pos.lots * LOT_JPY_NOTIONAL * 0.02;
 
   const closeSide: TradeSide = pos.side === "buy" ? "sell" : "buy";
   const entry: TradeLogEntry = {
@@ -87,7 +87,7 @@ export function closePosition(
   };
 
   return {
-    balance: state.balance + marginBack + pnl,
+    balance: state.balance + pnl,
     positions: state.positions.filter((p) => p.id !== positionId),
     history: [entry, ...state.history].slice(0, 100),
     updatedAt: Date.now(),

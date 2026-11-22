@@ -438,11 +438,21 @@ a {
 }
 
 .paper__actions {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.55rem;
-  margin-bottom: 1.35rem;
+  margin-bottom: 0.75rem;
+}
+
+.paper__flash {
+  margin: 0 0 1.1rem;
+  font-size: 0.85rem;
+  color: var(--gold-soft);
+  letter-spacing: 0.03em;
+  animation: riseIn 0.35s ease-out both;
 }
 
 .paper__lots {
