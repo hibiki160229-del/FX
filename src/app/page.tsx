@@ -16,14 +16,14 @@ export default async function Home() {
           </p>
           <h1 className="hero__headline">ドル円の流れを、静かに読む。</h1>
           <p className="hero__lead">
-            USD/JPY のチャートとテクニカル指標、シグナルの短い理由、仮想資金での練習まで。
+            履歴でルールを自動評価し、成績の良いシグナルだけを載せます。チャートと仮想取引もそのまま使えます。
           </p>
           <div className="hero__cta">
-            <a className="btn btn--primary" href="#desk">
-              チャートを見る
+            <a className="btn btn--primary" href="#auto-analysis">
+              自動分析を開く
             </a>
             <a className="btn btn--ghost" href="#desk">
-              ペーパー取引へ
+              チャート・ペーパー取引へ
             </a>
           </div>
         </div>
