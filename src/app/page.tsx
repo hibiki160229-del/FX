@@ -14,7 +14,12 @@ export default async function Home() {
             <span className="hero__brand-ja">円脈</span>
             <span className="hero__brand-en">ENMYAKU</span>
           </p>
-          <h1 className="hero__headline">ドル円の流れを、静かに読む。</h1>
+          <h1 className="hero__headline">
+            ドル円の流れを、静かに読む。
+            <span className="hero__headline-follow">
+              感情は捨てろ、論理を信じろ。
+            </span>
+          </h1>
           <p className="hero__lead">
             常時分析が履歴でルールを回し続け、成績の良いシグナルだけを載せます。チャートと仮想取引もそのまま使えます。
           </p>

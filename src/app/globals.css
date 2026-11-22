@@ -34,7 +34,9 @@ body {
   margin: 0;
   min-height: 100vh;
   color: var(--foam);
-  background: var(--ink);
+  background:
+    radial-gradient(ellipse 120% 80% at 50% -10%, rgba(22, 58, 68, 0.55), transparent 55%),
+    linear-gradient(180deg, #041018 0%, var(--ink) 40%, #06141c 100%);
   font-family: var(--font-body), "Hiragino Sans", sans-serif;
 }
 
@@ -62,10 +64,26 @@ a {
   inset: 0;
   z-index: -2;
   background:
-    radial-gradient(ellipse 90% 60% at 70% 20%, rgba(36, 110, 122, 0.45), transparent 55%),
-    radial-gradient(ellipse 70% 50% at 15% 80%, rgba(212, 168, 83, 0.14), transparent 50%),
-    linear-gradient(165deg, #041018 0%, #0a2230 42%, #12343d 78%, #07131a 100%);
+    radial-gradient(ellipse 55% 40% at 78% 12%, rgba(120, 196, 210, 0.22), transparent 62%),
+    radial-gradient(ellipse 90% 60% at 68% 22%, rgba(28, 98, 112, 0.55), transparent 58%),
+    radial-gradient(ellipse 75% 45% at 12% 78%, rgba(212, 168, 83, 0.16), transparent 52%),
+    radial-gradient(ellipse 50% 35% at 42% 58%, rgba(14, 72, 84, 0.35), transparent 70%),
+    linear-gradient(180deg, transparent 48%, rgba(4, 16, 24, 0.55) 78%, rgba(4, 12, 18, 0.92) 100%),
+    linear-gradient(165deg, #030d14 0%, #081c28 38%, #0f343f 72%, #06131a 100%);
   animation: drift 18s ease-in-out infinite alternate;
+}
+
+.hero__atmosphere::before {
+  content: "";
+  position: absolute;
+  inset: -8%;
+  background:
+    radial-gradient(ellipse 42% 28% at 62% 34%, rgba(158, 196, 210, 0.14), transparent 70%),
+    radial-gradient(ellipse 30% 22% at 28% 62%, rgba(212, 168, 83, 0.08), transparent 72%);
+  filter: blur(28px);
+  opacity: 0.9;
+  animation: hazeDrift 22s ease-in-out infinite alternate;
+  pointer-events: none;
 }
 
 .hero__atmosphere::after {
@@ -73,18 +91,20 @@ a {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(158, 196, 210, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(158, 196, 210, 0.05) 1px, transparent 1px);
-  background-size: 64px 64px;
-  mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, black 20%, transparent 75%);
+    linear-gradient(rgba(158, 196, 210, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(158, 196, 210, 0.055) 1px, transparent 1px),
+    radial-gradient(ellipse 90% 55% at 50% 100%, rgba(8, 36, 44, 0.55), transparent 60%);
+  background-size: 56px 56px, 56px 56px, auto;
+  mask-image: radial-gradient(ellipse 85% 72% at 48% 38%, black 18%, transparent 78%);
   animation: gridPulse 10s ease-in-out infinite;
+  pointer-events: none;
 }
 
 .hero__grain {
   position: absolute;
   inset: 0;
   z-index: -1;
-  opacity: 0.18;
+  opacity: 0.22;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   mix-blend-mode: soft-light;
   pointer-events: none;
@@ -122,6 +142,9 @@ a {
 }
 
 .hero__headline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
   margin: 0 0 1rem;
   font-family: var(--font-display), serif;
   font-size: clamp(1.45rem, 3.4vw, 2.15rem);
@@ -130,6 +153,13 @@ a {
   line-height: 1.45;
   color: rgba(232, 240, 242, 0.92);
   max-width: 18em;
+}
+
+.hero__headline-follow {
+  display: block;
+  font-size: 0.92em;
+  letter-spacing: 0.06em;
+  color: rgba(232, 240, 242, 0.78);
 }
 
 .hero__lead {
@@ -814,13 +844,24 @@ a {
   }
 }
 
+@keyframes hazeDrift {
+  from {
+    transform: translate3d(-1.5%, 0.5%, 0) scale(1);
+    opacity: 0.75;
+  }
+  to {
+    transform: translate3d(2%, -1.2%, 0) scale(1.06);
+    opacity: 1;
+  }
+}
+
 @keyframes gridPulse {
   0%,
   100% {
-    opacity: 0.55;
+    opacity: 0.5;
   }
   50% {
-    opacity: 0.9;
+    opacity: 0.88;
   }
 }
 
@@ -848,6 +889,7 @@ a {
 
 @media (prefers-reduced-motion: reduce) {
   .hero__atmosphere,
+  .hero__atmosphere::before,
   .hero__atmosphere::after,
   .hero__content,
   .desk__chart-wrap {
