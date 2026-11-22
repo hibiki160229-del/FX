@@ -1,20 +1,31 @@
 "use client";
 
 import {
+  ANALYSIS_INTERVAL_MS,
   loadLastAnalysis,
   promoteCandidates,
   promoteSuggested,
   saveLastAnalysis,
   saveSignalRuleSet,
+  type AnalysisLoopSnapshot,
   type AnalysisRunResult,
   type RankedCandidate,
 } from "@/lib/analysis";
 import type { SignalRuleSet } from "@/lib/signals";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type Props = {
   ruleSet: SignalRuleSet;
   onRuleSetChange: (next: SignalRuleSet) => void;
+};
+
+type StatusPayload = {
+  ok: boolean;
+  loop: AnalysisLoopSnapshot & {
+    intervalMs: number;
+    schedulerStarted: boolean;
+  };
+  result: AnalysisRunResult | null;
 };
 
 function pct(n: number) {
@@ -32,12 +43,139 @@ function sourceLabel(s: RankedCandidate["source"]) {
   }
 }
 
+function formatTs(ms: number | null) {
+  if (ms == null) return "—";
+  try {
+    return new Intl.DateTimeFormat("ja-JP", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }).format(new Date(ms));
+  } catch {
+    return new Date(ms).toLocaleString("ja-JP");
+  }
+}
+
+function stateLabel(state: AnalysisLoopSnapshot["state"]) {
+  switch (state) {
+    case "running":
+      return "分析実行中";
+    case "ok":
+      return "稼働中（最新成功）";
+    case "error":
+      return "稼働中（直近エラー）";
+    default:
+      return "待機中";
+  }
+}
+
+function ruleSetsEqual(a: SignalRuleSet, b: SignalRuleSet) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 export function AutoAnalysis({ ruleSet, onRuleSetChange }: Props) {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisRunResult | null>(null);
+  const [loop, setLoop] = useState<StatusPayload["loop"] | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [flash, setFlash] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  const appliedAsOf = useRef<number | null>(null);
+  const ruleSetRef = useRef(ruleSet);
+  const onRuleSetChangeRef = useRef(onRuleSetChange);
+
+  useEffect(() => {
+    ruleSetRef.current = ruleSet;
+  }, [ruleSet]);
+
+  useEffect(() => {
+    onRuleSetChangeRef.current = onRuleSetChange;
+  }, [onRuleSetChange]);
+
+  const showFlash = useCallback((msg: string) => {
+    setFlash(msg);
+    window.setTimeout(() => setFlash(null), 2400);
+  }, []);
+
+  const applyServerRules = useCallback(
+    (snapshot: AnalysisLoopSnapshot, analysis: AnalysisRunResult | null) => {
+      if (analysis) {
+        setResult(analysis);
+        saveLastAnalysis(analysis);
+        const auto = new Set(
+          analysis.ranked.filter((r) => r.passed).slice(0, 5).map((r) => r.id),
+        );
+        setSelected(auto);
+      }
+
+      if (
+        snapshot.autoPromoted &&
+        snapshot.asOf != null &&
+        snapshot.asOf !== appliedAsOf.current
+      ) {
+        const next = snapshot.activeRuleSet;
+        if (!ruleSetsEqual(next, ruleSetRef.current)) {
+          saveSignalRuleSet(next);
+          onRuleSetChangeRef.current(next);
+          showFlash(
+            `常時分析がルールを更新 — ${snapshot.promotedCount} 件を自動採用`,
+          );
+        }
+        appliedAsOf.current = snapshot.asOf;
+      }
+    },
+    [showFlash],
+  );
+
+  const refreshStatus = useCallback(async () => {
+    try {
+      const res = await fetch("/api/analysis/status", { cache: "no-store" });
+      if (!res.ok) return;
+      const json = (await res.json()) as StatusPayload;
+      setLoop(json.loop);
+      applyServerRules(json.loop, json.result);
+      if (json.loop.lastError && json.loop.state === "error") {
+        setError(json.loop.lastError);
+      } else {
+        setError(null);
+      }
+    } catch {
+      // keep local cache
+    }
+  }, [applyServerRules]);
+
+  const keepaliveTick = useCallback(async () => {
+    try {
+      const res = await fetch("/api/analysis/tick", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) return;
+      const json = (await res.json()) as {
+        ran: boolean;
+        loop: AnalysisLoopSnapshot;
+      };
+      setLoop((prev) =>
+        prev
+          ? {
+              ...prev,
+              ...json.loop,
+              intervalMs: prev.intervalMs,
+              schedulerStarted: prev.schedulerStarted,
+            }
+          : null,
+      );
+      if (json.ran) {
+        await refreshStatus();
+      }
+    } catch {
+      // ignore keepalive failures
+    }
+  }, [refreshStatus]);
 
   useEffect(() => {
     const last = loadLastAnalysis();
@@ -48,14 +186,25 @@ export function AutoAnalysis({ ruleSet, onRuleSetChange }: Props) {
       );
       setSelected(auto);
     }
+    void refreshStatus().then(() => keepaliveTick());
+
+    const statusId = window.setInterval(() => {
+      void refreshStatus();
+    }, 45_000);
+    const tickId = window.setInterval(() => {
+      void keepaliveTick();
+    }, 60_000);
+    const clockId = window.setInterval(() => setNow(Date.now()), 15_000);
+    return () => {
+      window.clearInterval(statusId);
+      window.clearInterval(tickId);
+      window.clearInterval(clockId);
+    };
+    // Mount-once loop; callbacks stay stable via refs above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const showFlash = (msg: string) => {
-    setFlash(msg);
-    window.setTimeout(() => setFlash(null), 2400);
-  };
-
-  const run = async () => {
+  const runManual = async () => {
     setRunning(true);
     setError(null);
     try {
@@ -66,28 +215,64 @@ export function AutoAnalysis({ ruleSet, onRuleSetChange }: Props) {
           range: "3mo",
           interval: "1h",
           includeWeb: true,
+          autoPromote: true,
         }),
       });
       if (!res.ok) {
         const j = (await res.json().catch(() => null)) as {
           error?: string;
+          loop?: AnalysisLoopSnapshot;
         } | null;
+        if (j?.loop) {
+          setLoop((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  ...j.loop!,
+                  intervalMs: prev.intervalMs,
+                  schedulerStarted: prev.schedulerStarted,
+                }
+              : null,
+          );
+        }
         throw new Error(j?.error ?? `分析に失敗しました (${res.status})`);
       }
-      const json = (await res.json()) as AnalysisRunResult;
+      const json = (await res.json()) as AnalysisRunResult & {
+        loop?: AnalysisLoopSnapshot;
+        throttled?: boolean;
+      };
       setResult(json);
       saveLastAnalysis(json);
+      if (json.loop) {
+        applyServerRules(json.loop, json);
+        setLoop((prev) =>
+          prev
+            ? {
+                ...prev,
+                ...json.loop!,
+                intervalMs: prev.intervalMs,
+                schedulerStarted: prev.schedulerStarted,
+              }
+            : null,
+        );
+      } else {
+        const next = promoteSuggested(json.suggestedRuleSet);
+        onRuleSetChange(next);
+      }
       const auto = new Set(
         json.ranked.filter((r) => r.passed).slice(0, 5).map((r) => r.id),
       );
       setSelected(auto);
       showFlash(
-        `分析完了 — ${json.ranked.filter((r) => r.passed).length} 件が基準通過`,
+        json.throttled
+          ? "直近の分析結果を表示中（再実行クールダウン）"
+          : `再分析完了 — ${json.ranked.filter((r) => r.passed).length} 件通過・自動採用`,
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : "分析エラー");
     } finally {
       setRunning(false);
+      void refreshStatus();
     }
   };
 
@@ -126,20 +311,69 @@ export function AutoAnalysis({ ruleSet, onRuleSetChange }: Props) {
     .map((r) => r.labelJa)
     .join(" · ");
 
+  const intervalMin = Math.round(
+    (loop?.intervalMs ?? ANALYSIS_INTERVAL_MS) / 60_000,
+  );
+  const isBusy = running || loop?.state === "running";
+  const nextLabel =
+    loop?.nextRunAt != null
+      ? loop.nextRunAt <= now
+        ? "まもなく"
+        : formatTs(loop.nextRunAt)
+      : "—";
+
   return (
     <div className="auto">
+      <div className="auto__loop" aria-live="polite">
+        <div className="auto__loop-head">
+          <span
+            className={`auto__pulse ${isBusy ? "is-busy" : "is-on"}`}
+            aria-hidden
+          />
+          <div>
+            <strong className="auto__loop-title">常時分析</strong>
+            <p className="auto__loop-state">
+              {loop ? stateLabel(loop.state) : "接続中…"}
+              {loop?.schedulerStarted ? " · サーバー周期あり" : ""}
+            </p>
+          </div>
+        </div>
+        <dl className="auto__loop-meta">
+          <div>
+            <dt>最終実行</dt>
+            <dd>{formatTs(loop?.lastRunAt ?? result?.asOf ?? null)}</dd>
+          </div>
+          <div>
+            <dt>次回予定</dt>
+            <dd>{nextLabel}</dd>
+          </div>
+          <div>
+            <dt>周期</dt>
+            <dd>{intervalMin} 分</dd>
+          </div>
+          <div>
+            <dt>自動採用</dt>
+            <dd>
+              {loop?.autoPromoted
+                ? `${loop.promotedCount} 件反映済`
+                : "待機"}
+            </dd>
+          </div>
+        </dl>
+      </div>
+
       <div className="auto__intro">
         <p>
-          履歴の USD/JPY
-          で候補ルールを自動バックテストし、成績で並べます。チャートを読まずにシグナル用ルールを選べます。
+          サーバーが約 {intervalMin}{" "}
+          分ごとに USD/JPY 履歴を取得し、バックテスト→スコアリング→通過ルールの自動採用まで回します。手動クリックは不要です。
         </p>
         <button
           type="button"
-          className="btn btn--primary"
-          onClick={run}
-          disabled={running}
+          className="btn btn--ghost"
+          onClick={runManual}
+          disabled={isBusy}
         >
-          {running ? "分析中…" : "自動分析を実行"}
+          {isBusy ? "分析中…" : "今すぐ再分析"}
         </button>
       </div>
 
@@ -172,7 +406,7 @@ export function AutoAnalysis({ ruleSet, onRuleSetChange }: Props) {
               className="btn btn--primary"
               onClick={promotePack}
             >
-              推奨パックを採用
+              推奨パックを再適用
             </button>
             <button
               type="button"
@@ -246,9 +480,9 @@ export function AutoAnalysis({ ruleSet, onRuleSetChange }: Props) {
         </>
       )}
 
-      {!result && !running && (
+      {!result && !isBusy && (
         <p className="auto__empty">
-          「自動分析を実行」で評価が始まります。上位ルールを採用すると、下のシグナルヒントとペーパー取引の判断材料が更新されます。
+          常時分析の初回実行を待っています。完了すると順位と自動採用ルールが表示されます。
         </p>
       )}
     </div>
