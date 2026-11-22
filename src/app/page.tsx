@@ -21,11 +21,11 @@ export default async function Home() {
             </span>
           </h1>
           <p className="hero__lead">
-            常時分析が履歴でルールを回し続け、成績の良いシグナルだけを載せます。チャートと仮想取引もそのまま使えます。
+            常時分析が履歴でルールを回し続け、買い／売りタイミングと利確・損切を通知します。チャートと仮想取引もそのまま使えます。
           </p>
           <div className="hero__cta">
-            <a className="btn btn--primary" href="#auto-analysis">
-              常時分析の状態を見る
+            <a className="btn btn--primary" href="#entry-alerts">
+              エントリーアラートへ
             </a>
             <a className="btn btn--ghost" href="#desk">
               チャート・ペーパー取引へ
