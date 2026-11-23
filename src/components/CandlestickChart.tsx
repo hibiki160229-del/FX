@@ -45,8 +45,8 @@ export function CandlestickChart({ bars, indicators }: Props) {
         horzLines: { color: "rgba(120, 170, 180, 0.08)" },
       },
       crosshair: {
-        vertLine: { color: "rgba(212, 168, 83, 0.45)", width: 1 },
-        horzLine: { color: "rgba(212, 168, 83, 0.45)", width: 1 },
+        vertLine: { color: "rgba(168, 224, 212, 0.45)", width: 1 },
+        horzLine: { color: "rgba(168, 224, 212, 0.45)", width: 1 },
       },
       rightPriceScale: {
         borderColor: "rgba(120, 170, 180, 0.18)",
@@ -60,12 +60,12 @@ export function CandlestickChart({ bars, indicators }: Props) {
     chartRef.current = chart;
 
     const candle = chart.addSeries(CandlestickSeries, {
-      upColor: "#3ecf8e",
-      downColor: "#e26d5a",
-      borderUpColor: "#3ecf8e",
-      borderDownColor: "#e26d5a",
-      wickUpColor: "#3ecf8e",
-      wickDownColor: "#e26d5a",
+      upColor: "#2fd4a8",
+      downColor: "#ff7a6e",
+      borderUpColor: "#2fd4a8",
+      borderDownColor: "#ff7a6e",
+      wickUpColor: "#2fd4a8",
+      wickDownColor: "#ff7a6e",
     });
     candle.setData(
       bars.map((b) => ({
@@ -83,14 +83,14 @@ export function CandlestickChart({ bars, indicators }: Props) {
       const ma20 = sma(bars, 20);
       const ma50 = sma(bars, 50);
       const s20 = chart.addSeries(LineSeries, {
-        color: "#d4a853",
+        color: "#a8e0d4",
         lineWidth: 2,
         priceLineVisible: false,
         lastValueVisible: false,
         title: "MA20",
       });
       const s50 = chart.addSeries(LineSeries, {
-        color: "#7ec8e3",
+        color: "#7ed4e8",
         lineWidth: 2,
         priceLineVisible: false,
         lastValueVisible: false,
@@ -117,14 +117,14 @@ export function CandlestickChart({ bars, indicators }: Props) {
       const e12 = ema(bars, 12);
       const e26 = ema(bars, 26);
       const s12 = chart.addSeries(LineSeries, {
-        color: "#f0c36a",
+        color: "#d4f5ec",
         lineWidth: 2,
         priceLineVisible: false,
         lastValueVisible: false,
         title: "EMA12",
       });
       const s26 = chart.addSeries(LineSeries, {
-        color: "#9ad0c2",
+        color: "#7ed4e8",
         lineWidth: 2,
         priceLineVisible: false,
         lastValueVisible: false,
@@ -189,7 +189,7 @@ export function CandlestickChart({ bars, indicators }: Props) {
     if (indicators.rsi) {
       const r = rsi(bars, 14);
       const rsiSeries = chart.addSeries(LineSeries, {
-        color: "#c9a227",
+        color: "#a8e0d4",
         lineWidth: 2,
         priceScaleId: "rsi",
         priceLineVisible: false,
@@ -222,14 +222,14 @@ export function CandlestickChart({ bars, indicators }: Props) {
         title: "MACD",
       });
       const macdLine = chart.addSeries(LineSeries, {
-        color: "#7ec8e3",
+        color: "#7ed4e8",
         lineWidth: 2,
         priceScaleId: "macd",
         priceLineVisible: false,
         lastValueVisible: false,
       });
       const signal = chart.addSeries(LineSeries, {
-        color: "#e26d5a",
+        color: "#ff7a6e",
         lineWidth: 1,
         priceScaleId: "macd",
         priceLineVisible: false,
@@ -256,7 +256,7 @@ export function CandlestickChart({ bars, indicators }: Props) {
               time: b.time as Time,
               value: h,
               color:
-                h >= 0 ? "rgba(62, 207, 142, 0.55)" : "rgba(226, 109, 90, 0.55)",
+                h >= 0 ? "rgba(47, 212, 168, 0.55)" : "rgba(255, 122, 110, 0.55)",
             };
           })
           .filter(Boolean) as {
