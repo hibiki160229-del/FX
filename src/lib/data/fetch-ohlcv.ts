@@ -1,15 +1,17 @@
 import type { OhlcvBar } from "@/lib/types";
+import { fetchOandaOhlcv, isOandaConfigured } from "@/lib/providers/oanda";
+import type { PriceSourceId } from "@/lib/providers/types";
 import { generateMockOhlcv } from "./mock-ohlcv";
 
 /**
- * In-memory OHLCV cache TTL — guards Yahoo / analyze / page fan-out.
- * Aligned with near-realtime desk poll (15–60s); not tick streaming.
+ * In-memory OHLCV cache TTL — guards Yahoo / OANDA / analyze / page fan-out.
+ * Aligned with near-realtime desk poll (15–60s).
  */
 export const OHLCV_CACHE_TTL_MS = 15 * 1000;
 
 export type OhlcvPayload = {
   bars: OhlcvBar[];
-  source: "yahoo" | "sample";
+  source: PriceSourceId;
   pair: "USD/JPY";
   interval: string;
   asOf: number;
@@ -100,6 +102,15 @@ async function fetchUsdJpyOhlcvUncached(
       asOf: Date.now(),
     };
   } catch {
+    // Prefer OANDA practice candles when Yahoo fails and secrets are set.
+    if (isOandaConfigured()) {
+      try {
+        const oanda = await fetchOandaOhlcv(range, interval);
+        if (oanda) return oanda;
+      } catch {
+        // fall through to sample
+      }
+    }
     return {
       bars: generateMockOhlcv(240),
       source: "sample",

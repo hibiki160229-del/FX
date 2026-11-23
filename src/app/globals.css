@@ -361,6 +361,11 @@ a {
   color: var(--gold);
 }
 
+.desk__source--oanda {
+  color: rgba(126, 200, 227, 0.85);
+  font-variant-numeric: tabular-nums;
+}
+
 .desk__live {
   display: inline-flex;
   align-items: center;

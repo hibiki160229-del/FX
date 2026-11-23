@@ -391,7 +391,11 @@ export function AutoAnalysis({ ruleSet, onRuleSetChange }: Props) {
           <div className="auto__meta">
             <span>
               {result.barCount} 本 · {result.interval} ·{" "}
-              {result.source === "yahoo" ? "市場データ" : "サンプル"}
+              {result.source === "oanda"
+                ? "OANDA デモ"
+                : result.source === "yahoo"
+                  ? "市場データ"
+                  : "サンプル"}
             </span>
             <span>
               下限: 取引≥{result.floors.minTrades} / DD≤
