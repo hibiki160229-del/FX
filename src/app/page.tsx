@@ -1,3 +1,4 @@
+import { HeroChartBackground } from "@/components/HeroChartBackground";
 import { TradingDesk } from "@/components/TradingDesk";
 import { fetchUsdJpyOhlcv } from "@/lib/data/fetch-ohlcv";
 
@@ -7,7 +8,9 @@ export default async function Home() {
   return (
     <main className="page">
       <section className="hero" aria-label="円脈">
+        <HeroChartBackground bars={initial.bars} />
         <div className="hero__atmosphere" aria-hidden />
+        <div className="hero__veil" aria-hidden />
         <div className="hero__grain" aria-hidden />
         <div className="hero__content">
           <p className="hero__brand">
