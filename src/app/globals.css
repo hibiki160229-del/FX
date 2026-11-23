@@ -361,6 +361,61 @@ a {
   color: var(--gold);
 }
 
+.desk__live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+}
+
+.desk__live.is-live {
+  color: var(--up);
+}
+
+.desk__live.is-stale {
+  color: rgba(240, 195, 106, 0.85);
+}
+
+.desk__live-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 0 rgba(62, 207, 142, 0.4);
+}
+
+.desk__live.is-live .desk__live-dot {
+  animation: pulseOn 2.2s ease-out infinite;
+}
+
+.desk__live.is-stale .desk__live-dot {
+  animation: none;
+  opacity: 0.7;
+}
+
+.desk__updated {
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  color: rgba(232, 240, 242, 0.62);
+  letter-spacing: 0.02em;
+}
+
+.desk__freshness-note {
+  margin: 0 0 1.1rem;
+  font-size: 0.8rem;
+  line-height: 1.65;
+  color: rgba(232, 240, 242, 0.48);
+  max-width: 52rem;
+}
+
+.desk__poll-error {
+  margin: -0.5rem 0 0.85rem;
+  font-size: 0.82rem;
+  color: var(--gold);
+}
+
 .desk__bias {
   font-size: 0.78rem;
   letter-spacing: 0.08em;

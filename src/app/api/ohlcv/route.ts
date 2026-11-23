@@ -62,7 +62,7 @@ export async function GET(request: Request) {
   const payload = await fetchUsdJpyOhlcv(range, interval);
   return NextResponse.json(payload, {
     headers: {
-      "Cache-Control": "private, max-age=60",
+      "Cache-Control": "private, max-age=15",
     },
   });
 }

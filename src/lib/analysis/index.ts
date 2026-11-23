@@ -2,7 +2,9 @@ export { backtestRule } from "./backtest";
 export { extractWebCandidates } from "./extract";
 export {
   ANALYSIS_INTERVAL_MS,
+  ANALYSIS_KEEPALIVE_MS,
   ANALYSIS_MIN_GAP_MS,
+  ANALYSIS_STATUS_POLL_MS,
   DEFAULT_ANALYSIS_INTERVAL,
   DEFAULT_ANALYSIS_RANGE,
 } from "./loop-config";

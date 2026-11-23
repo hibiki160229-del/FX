@@ -36,7 +36,8 @@ export type RiskLevels = {
   method: LevelsMethod;
 };
 
-export const ENTRY_ALERT_COOLDOWN_MS = 15 * 60 * 1000; // 15 min same fingerprint
+/** Same fingerprint / side: suppress toast+Notification (panel still updates). */
+export const ENTRY_ALERT_COOLDOWN_MS = 5 * 60 * 1000; // 5 min — near-realtime anti-spam
 export const ATR_PERIOD = 14;
 export const ATR_SL_MULT = 1.5;
 export const ATR_TP_MULT = 3; // 2R vs 1.5 ATR SL

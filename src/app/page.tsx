@@ -1,14 +1,23 @@
 import { HeroChartBackground } from "@/components/HeroChartBackground";
 import { TradingDesk } from "@/components/TradingDesk";
 import { fetchUsdJpyOhlcv } from "@/lib/data/fetch-ohlcv";
+import {
+  DESK_OHLCV_INTERVAL,
+  DESK_OHLCV_RANGE,
+  HERO_OHLCV_INTERVAL,
+  HERO_OHLCV_RANGE,
+} from "@/lib/realtime/config";
 
 export default async function Home() {
-  const initial = await fetchUsdJpyOhlcv("1mo", "1h");
+  const [deskInitial, heroInitial] = await Promise.all([
+    fetchUsdJpyOhlcv(DESK_OHLCV_RANGE, DESK_OHLCV_INTERVAL),
+    fetchUsdJpyOhlcv(HERO_OHLCV_RANGE, HERO_OHLCV_INTERVAL),
+  ]);
 
   return (
     <main className="page">
       <section className="hero" aria-label="円脈">
-        <HeroChartBackground bars={initial.bars} />
+        <HeroChartBackground bars={heroInitial.bars} />
         <div className="hero__atmosphere" aria-hidden />
         <div className="hero__veil" aria-hidden />
         <div className="hero__grain" aria-hidden />
@@ -24,7 +33,7 @@ export default async function Home() {
             </span>
           </h1>
           <p className="hero__lead">
-            常時分析が履歴でルールを回し続け、買い／売りタイミングと利確・損切を通知します。チャートと仮想取引もそのまま使えます。
+            デスク表示中は約30秒ごとに1分足を更新し、買い／売りと利確・損切を再評価します。常時分析がルールを回し続けます。
           </p>
           <div className="hero__cta">
             <a className="btn btn--primary" href="#entry-alerts">
@@ -38,12 +47,13 @@ export default async function Home() {
       </section>
 
       <section id="desk" className="workspace">
-        <TradingDesk initial={initial} />
+        <TradingDesk initial={deskInitial} />
       </section>
 
       <footer className="footer">
         <p>
-          円脈 ENMYAKU — 学習・検証用。リアルマネー・自動発注は対象外です。
+          円脈 ENMYAKU — 学習・検証用。リアルマネー・自動発注は対象外です。相場は
+          Yahoo Finance のポーリング（ティック配信ではありません）。
         </p>
       </footer>
     </main>
