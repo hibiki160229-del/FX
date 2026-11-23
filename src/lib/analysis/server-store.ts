@@ -14,7 +14,7 @@ export type AnalysisLoopSnapshot = {
   autoPromoted: boolean;
   promotedCount: number;
   barCount: number | null;
-  source: "yahoo" | "sample" | null;
+  source: "yahoo" | "oanda" | "sample" | null;
   interval: string | null;
   passedCount: number;
   candidateCount: number;

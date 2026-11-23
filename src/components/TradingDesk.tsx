@@ -9,8 +9,10 @@ import { SignalHints } from "@/components/SignalHints";
 import { buildEntryAlerts } from "@/lib/alerts";
 import { loadSignalRuleSet } from "@/lib/analysis";
 import type { OhlcvPayload } from "@/lib/data/fetch-ohlcv";
+import type { LiveQuote, ProviderStatus } from "@/lib/providers/types";
 import { loadPaperState } from "@/lib/paper/storage";
 import {
+  applyLiveMark,
   DESK_CHART_MAX_BARS,
   DESK_FRESH_MS,
   DESK_HIDDEN_POLL_MS,
@@ -18,7 +20,10 @@ import {
   DESK_OHLCV_RANGE,
   DESK_POLL_MS,
   intervalLabelJa,
-} from "@/lib/realtime/config";
+  OANDA_FRESH_MS,
+  OANDA_HIDDEN_POLL_MS,
+  OANDA_POLL_MS,
+} from "@/lib/realtime";
 import {
   DEFAULT_RULE_SET,
   evaluateSignals,
@@ -40,6 +45,12 @@ type Props = {
   initial: OhlcvPayload;
 };
 
+type PricingApiResponse = {
+  configured: boolean;
+  quote: LiveQuote | null;
+  status: ProviderStatus;
+};
+
 function formatUpdatedAt(ms: number) {
   try {
     return new Intl.DateTimeFormat("ja-JP", {
@@ -52,8 +63,18 @@ function formatUpdatedAt(ms: number) {
   }
 }
 
+function ohlcvSourceLabel(source: OhlcvPayload["source"]) {
+  if (source === "oanda") return "OANDA デモ足";
+  if (source === "yahoo") return "Yahoo 足";
+  return "サンプルデータ";
+}
+
 export function TradingDesk({ initial }: Props) {
   const [payload, setPayload] = useState(initial);
+  const [liveQuote, setLiveQuote] = useState<LiveQuote | null>(null);
+  const [providerStatus, setProviderStatus] = useState<ProviderStatus | null>(
+    null,
+  );
   const [indicators, setIndicators] = useState<IndicatorState>(DEFAULT_INDICATORS);
   const [paper, setPaper] = useState<PaperState | null>(null);
   const [ruleSet, setRuleSet] = useState<SignalRuleSet>(DEFAULT_RULE_SET);
@@ -68,27 +89,36 @@ export function TradingDesk({ initial }: Props) {
   }, []);
 
   useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 5_000);
+    const id = window.setInterval(() => setNow(Date.now()), 1_000);
     return () => window.clearInterval(id);
   }, []);
 
-  const mark = payload.bars.at(-1)?.close ?? 0;
+  const liveBars = useMemo(() => {
+    if (!liveQuote) return payload.bars;
+    return applyLiveMark(payload.bars, liveQuote, 60);
+  }, [payload.bars, liveQuote]);
+
+  const mark = liveQuote?.mid ?? liveBars.at(-1)?.close ?? 0;
   const hints = useMemo(
-    () => evaluateSignals(payload.bars, ruleSet),
-    [payload.bars, ruleSet],
+    () => evaluateSignals(liveBars, ruleSet),
+    [liveBars, ruleSet],
   );
   const entryAlerts = useMemo(
-    () => buildEntryAlerts(hints, payload.bars, mark),
-    [hints, payload.bars, mark],
+    () => buildEntryAlerts(hints, liveBars, mark),
+    [hints, liveBars, mark],
   );
   const bias = latestBias(hints);
   const chartBars = useMemo(() => {
-    if (payload.bars.length <= DESK_CHART_MAX_BARS) return payload.bars;
-    return payload.bars.slice(-DESK_CHART_MAX_BARS);
-  }, [payload.bars]);
+    if (liveBars.length <= DESK_CHART_MAX_BARS) return liveBars;
+    return liveBars.slice(-DESK_CHART_MAX_BARS);
+  }, [liveBars]);
 
-  const ageMs = now - payload.asOf;
-  const isLive = ageMs <= DESK_FRESH_MS;
+  const quoteAgeMs = liveQuote ? now - liveQuote.time : Number.POSITIVE_INFINITY;
+  const oandaLive = Boolean(liveQuote && quoteAgeMs <= OANDA_FRESH_MS);
+  const ohlcvAgeMs = now - payload.asOf;
+  const ohlcvLive = ohlcvAgeMs <= DESK_FRESH_MS;
+  const isLive = oandaLive || ohlcvLive;
+  const updatedAt = liveQuote?.time ?? payload.asOf;
   const intervalJa = intervalLabelJa(payload.interval);
 
   const refresh = useCallback(async (opts?: { silent?: boolean }) => {
@@ -116,7 +146,7 @@ export function TradingDesk({ initial }: Props) {
     }
   }, []);
 
-  // Near-realtime poll while desk is open; slower when tab hidden.
+  // Near-realtime OHLCV poll while desk is open; slower when tab hidden.
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null;
     let cancelled = false;
@@ -153,6 +183,117 @@ export function TradingDesk({ initial }: Props) {
     };
   }, [refresh]);
 
+  // OANDA practice stream (SSE) with REST poll fallback.
+  useEffect(() => {
+    let cancelled = false;
+    let es: EventSource | null = null;
+    let pollTimer: ReturnType<typeof setTimeout> | null = null;
+    let polling = false;
+    let sseErrors = 0;
+
+    const applyPricing = (body: PricingApiResponse) => {
+      if (cancelled) return;
+      setProviderStatus(body.status);
+      if (body.quote) setLiveQuote(body.quote);
+    };
+
+    const pollOnce = async () => {
+      try {
+        const res = await fetch("/api/pricing", { cache: "no-store" });
+        if (!res.ok) return;
+        const json = (await res.json()) as PricingApiResponse;
+        applyPricing(json);
+        return json;
+      } catch {
+        return null;
+      }
+    };
+
+    const schedulePoll = () => {
+      if (cancelled || !polling) return;
+      const hidden =
+        typeof document !== "undefined" &&
+        document.visibilityState === "hidden";
+      pollTimer = setTimeout(() => {
+        void pollOnce().finally(schedulePoll);
+      }, hidden ? OANDA_HIDDEN_POLL_MS : OANDA_POLL_MS);
+    };
+
+    const startPoll = () => {
+      if (polling) return;
+      polling = true;
+      if (es) {
+        es.close();
+        es = null;
+      }
+      void pollOnce().finally(schedulePoll);
+    };
+
+    const startSse = () => {
+      try {
+        es = new EventSource("/api/pricing/stream");
+        es.addEventListener("quote", (ev) => {
+          sseErrors = 0;
+          try {
+            const quote = JSON.parse((ev as MessageEvent).data) as LiveQuote;
+            if (!cancelled) setLiveQuote(quote);
+          } catch {
+            // ignore
+          }
+        });
+        es.addEventListener("status", (ev) => {
+          sseErrors = 0;
+          try {
+            const status = JSON.parse(
+              (ev as MessageEvent).data,
+            ) as ProviderStatus;
+            if (!cancelled) setProviderStatus(status);
+          } catch {
+            // ignore
+          }
+        });
+        es.onerror = () => {
+          sseErrors += 1;
+          // EventSource auto-retries; after repeated failures switch to poll
+          if (sseErrors >= 3) startPoll();
+        };
+      } catch {
+        startPoll();
+      }
+    };
+
+    void (async () => {
+      const first = await pollOnce();
+      if (cancelled) return;
+      if (!first?.configured) {
+        // Secrets missing — stay on Yahoo OHLCV only (no tight poll)
+        return;
+      }
+      startSse();
+    })();
+
+    return () => {
+      cancelled = true;
+      polling = false;
+      if (es) es.close();
+      if (pollTimer) clearTimeout(pollTimer);
+    };
+  }, []);
+
+  const liveLabel = oandaLive
+    ? liveQuote?.mode === "stream"
+      ? "OANDA ティック"
+      : liveQuote?.mode === "candle"
+        ? "OANDA S5"
+        : "OANDA ライブ"
+    : isLive
+      ? "ライブ"
+      : "遅延";
+
+  const feedNote =
+    providerStatus?.detailJa ??
+    "OANDA デモストリーム優先。未設定時は Yahoo 1分足ポーリング。";
+
   return (
     <div className="desk">
       <header className="desk__toolbar">
@@ -161,24 +302,25 @@ export function TradingDesk({ initial }: Props) {
           <span className="desk__price">{mark.toFixed(3)}</span>
           <span
             className={`desk__live ${isLive ? "is-live" : "is-stale"}`}
-            title={
-              isLive
-                ? "デスク表示中は約30秒ごとに更新"
-                : "データが古い可能性があります"
-            }
+            title={feedNote}
           >
             <span className="desk__live-dot" aria-hidden />
-            {isLive ? "ライブ" : "遅延"}
+            {liveLabel}
           </span>
           <span className="desk__updated">
-            最終更新 {formatUpdatedAt(payload.asOf)}
+            最終更新 {formatUpdatedAt(updatedAt)}
           </span>
           <span
             className={`desk__source ${payload.source === "sample" ? "is-sample" : ""}`}
           >
-            {payload.source === "yahoo" ? "市場データ" : "サンプルデータ"}
+            {ohlcvSourceLabel(payload.source)}
             · {intervalJa}
           </span>
+          {liveQuote && (
+            <span className="desk__source desk__source--oanda">
+              bid {liveQuote.bid.toFixed(3)} / ask {liveQuote.ask.toFixed(3)}
+            </span>
+          )}
           {bias && (
             <span className={`desk__bias desk__bias--${bias.side}`}>
               {bias.side === "long" ? "買い優勢" : "売り優勢"}
@@ -210,10 +352,8 @@ export function TradingDesk({ initial }: Props) {
       )}
 
       <p className="desk__freshness-note">
-        デスク表示中は約 {Math.round(DESK_POLL_MS / 1000)}{" "}
-        秒ごとに {intervalJa}{" "}
-        を再取得し、シグナル／エントリー（買い・売り・利確・損切）を再評価します。Yahoo
-        ポーリング＋キャッシュのためティック配信ではありません。取得失敗時はサンプルへフォールバックします。
+        {feedNote} ティック／高頻度価格はシグナルとエントリー（買い・売り・利確・損切）に即反映します。チャート足は約{" "}
+        {Math.round(DESK_POLL_MS / 1000)} 秒ごとに再取得（{intervalJa}）。
       </p>
 
       <EntryAlerts alerts={entryAlerts} />
@@ -227,7 +367,7 @@ export function TradingDesk({ initial }: Props) {
       <section id="auto-analysis" className="desk__panel desk__panel--wide">
         <h2>常時自動分析</h2>
         <p className="desk__panel-lead">
-          バックグラウンドで履歴データを定期評価し、通過したルールを自動でシグナルに載せます。エントリーアラートはチャート更新のたびに同じルール層から再計算されます。
+          バックグラウンドで履歴データを定期評価し、通過したルールを自動でシグナルに載せます。エントリーアラートはライブ価格更新のたびに同じルール層から再計算されます。
         </p>
         <AutoAnalysis ruleSet={ruleSet} onRuleSetChange={setRuleSet} />
       </section>
@@ -250,7 +390,7 @@ export function TradingDesk({ initial }: Props) {
             <PaperTrading
               state={paper}
               mark={mark}
-              bars={payload.bars}
+              bars={liveBars}
               onChange={setPaper}
             />
           ) : (
