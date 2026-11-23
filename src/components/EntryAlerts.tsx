@@ -123,7 +123,7 @@ export function EntryAlerts({ alerts }: Props) {
           <div className="entry-banner__idle">
             <span className="entry-banner__kicker">エントリー監視</span>
             <p>
-              現在バーでは明確な買い／売りタイミングはありません。常時分析のシグナルが揃うと、ここに利確・損切付きで表示します。
+              現在バーでは明確な買い／売りタイミングはありません。チャート更新のたびに再評価し、シグナルが揃うと利確・損切付きで表示します（同一内容の通知はクールダウンあり）。
             </p>
           </div>
         ) : (

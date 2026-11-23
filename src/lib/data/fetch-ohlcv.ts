@@ -1,8 +1,11 @@
 import type { OhlcvBar } from "@/lib/types";
 import { generateMockOhlcv } from "./mock-ohlcv";
 
-/** In-memory OHLCV cache TTL — guards Yahoo / analyze / page fan-out. */
-export const OHLCV_CACHE_TTL_MS = 60 * 1000;
+/**
+ * In-memory OHLCV cache TTL — guards Yahoo / analyze / page fan-out.
+ * Aligned with near-realtime desk poll (15–60s); not tick streaming.
+ */
+export const OHLCV_CACHE_TTL_MS = 15 * 1000;
 
 export type OhlcvPayload = {
   bars: OhlcvBar[];
@@ -52,7 +55,8 @@ async function fetchUsdJpyOhlcvUncached(
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/USDJPY=X?interval=${encodeURIComponent(interval)}&range=${encodeURIComponent(range)}`;
     const res = await fetch(url, {
       headers: { "User-Agent": "EnmyakuFX/1.0" },
-      next: { revalidate: 60 },
+      next: { revalidate: 15 },
+      cache: "no-store",
     });
     if (!res.ok) throw new Error(`yahoo ${res.status}`);
     const json = (await res.json()) as YahooChart;

@@ -2,6 +2,8 @@
 
 import {
   ANALYSIS_INTERVAL_MS,
+  ANALYSIS_KEEPALIVE_MS,
+  ANALYSIS_STATUS_POLL_MS,
   loadLastAnalysis,
   promoteCandidates,
   promoteSuggested,
@@ -190,11 +192,11 @@ export function AutoAnalysis({ ruleSet, onRuleSetChange }: Props) {
 
     const statusId = window.setInterval(() => {
       void refreshStatus();
-    }, 45_000);
+    }, ANALYSIS_STATUS_POLL_MS);
     const tickId = window.setInterval(() => {
       void keepaliveTick();
-    }, 60_000);
-    const clockId = window.setInterval(() => setNow(Date.now()), 15_000);
+    }, ANALYSIS_KEEPALIVE_MS);
+    const clockId = window.setInterval(() => setNow(Date.now()), 10_000);
     return () => {
       window.clearInterval(statusId);
       window.clearInterval(tickId);
@@ -311,9 +313,8 @@ export function AutoAnalysis({ ruleSet, onRuleSetChange }: Props) {
     .map((r) => r.labelJa)
     .join(" · ");
 
-  const intervalMin = Math.round(
-    (loop?.intervalMs ?? ANALYSIS_INTERVAL_MS) / 60_000,
-  );
+  const intervalMs = loop?.intervalMs ?? ANALYSIS_INTERVAL_MS;
+  const intervalMin = Math.max(1, Math.round(intervalMs / 60_000));
   const isBusy = running || loop?.state === "running";
   const nextLabel =
     loop?.nextRunAt != null
@@ -365,7 +366,7 @@ export function AutoAnalysis({ ruleSet, onRuleSetChange }: Props) {
       <div className="auto__intro">
         <p>
           サーバーが約 {intervalMin}{" "}
-          分ごとに USD/JPY 履歴を取得し、バックテスト→スコアリング→通過ルールの自動採用まで回します。手動クリックは不要です。
+          分ごとに USD/JPY の時間足履歴でバックテスト→スコアリング→通過ルール自動採用を回します（チャートの1分足ポーリングとは別周期）。手動クリックは不要です。
         </p>
         <button
           type="button"

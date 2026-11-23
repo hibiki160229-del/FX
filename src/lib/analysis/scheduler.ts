@@ -1,6 +1,7 @@
 import {
   ANALYSIS_INTERVAL_MS,
   ANALYSIS_MIN_GAP_MS,
+  ANALYSIS_SCHEDULER_CHECK_MS,
   DEFAULT_ANALYSIS_INTERVAL,
   DEFAULT_ANALYSIS_RANGE,
   DEFAULT_MAX_CANDIDATES,
@@ -130,7 +131,7 @@ export function startAnalysisScheduler() {
     void tickAnalysis().catch(() => {
       /* store captures error */
     });
-  }, Math.min(ANALYSIS_INTERVAL_MS, 60_000));
+  }, Math.min(ANALYSIS_INTERVAL_MS, ANALYSIS_SCHEDULER_CHECK_MS));
 
   // Don't keep the process alive solely for the timer in some runtimes.
   if (typeof sched.timer === "object" && sched.timer && "unref" in sched.timer) {

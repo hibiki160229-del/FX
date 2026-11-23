@@ -25,13 +25,31 @@ type Props = {
   indicators: IndicatorState;
 };
 
+type CandleApi = ISeriesApi<"Candlestick">;
+
+function linePoints(
+  bars: OhlcvBar[],
+  values: (number | null)[],
+): { time: Time; value: number }[] {
+  return bars
+    .map((b, i) =>
+      values[i] == null ? null : { time: b.time as Time, value: values[i]! },
+    )
+    .filter(Boolean) as { time: Time; value: number }[];
+}
+
 export function CandlestickChart({ bars, indicators }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
+  const candleRef = useRef<CandleApi | null>(null);
+  const overlayRef = useRef<ISeriesApi<"Line" | "Histogram">[]>([]);
+  const fittedRef = useRef(false);
+  const indicatorKey = JSON.stringify(indicators);
 
+  // Create chart shell once.
   useEffect(() => {
     const el = containerRef.current;
-    if (!el || bars.length === 0) return;
+    if (!el) return;
 
     const chart = createChart(el, {
       autoSize: true,
@@ -67,6 +85,39 @@ export function CandlestickChart({ bars, indicators }: Props) {
       wickUpColor: "#2fd4a8",
       wickDownColor: "#ff7a6e",
     });
+    candleRef.current = candle;
+
+    return () => {
+      for (const s of overlayRef.current) {
+        try {
+          chart.removeSeries(s);
+        } catch {
+          /* already gone */
+        }
+      }
+      overlayRef.current = [];
+      chart.remove();
+      chartRef.current = null;
+      candleRef.current = null;
+      fittedRef.current = false;
+    };
+  }, []);
+
+  // Rebuild indicator overlays when toggles change; refresh candle + overlays on new bars.
+  useEffect(() => {
+    const chart = chartRef.current;
+    const candle = candleRef.current;
+    if (!chart || !candle || bars.length === 0) return;
+
+    for (const s of overlayRef.current) {
+      try {
+        chart.removeSeries(s);
+      } catch {
+        /* ignore */
+      }
+    }
+    overlayRef.current = [];
+
     candle.setData(
       bars.map((b) => ({
         time: b.time as Time,
@@ -77,7 +128,14 @@ export function CandlestickChart({ bars, indicators }: Props) {
       })),
     );
 
-    const overlays: ISeriesApi<"Line">[] = [];
+    candle.priceScale().applyOptions({
+      scaleMargins: {
+        top: 0.08,
+        bottom: indicators.rsi || indicators.macd ? 0.32 : 0.08,
+      },
+    });
+
+    const overlays: ISeriesApi<"Line" | "Histogram">[] = [];
 
     if (indicators.ma) {
       const ma20 = sma(bars, 20);
@@ -96,20 +154,8 @@ export function CandlestickChart({ bars, indicators }: Props) {
         lastValueVisible: false,
         title: "MA50",
       });
-      s20.setData(
-        bars
-          .map((b, i) =>
-            ma20[i] == null ? null : { time: b.time as Time, value: ma20[i]! },
-          )
-          .filter(Boolean) as { time: Time; value: number }[],
-      );
-      s50.setData(
-        bars
-          .map((b, i) =>
-            ma50[i] == null ? null : { time: b.time as Time, value: ma50[i]! },
-          )
-          .filter(Boolean) as { time: Time; value: number }[],
-      );
+      s20.setData(linePoints(bars, ma20));
+      s50.setData(linePoints(bars, ma50));
       overlays.push(s20, s50);
     }
 
@@ -130,20 +176,8 @@ export function CandlestickChart({ bars, indicators }: Props) {
         lastValueVisible: false,
         title: "EMA26",
       });
-      s12.setData(
-        bars
-          .map((b, i) =>
-            e12[i] == null ? null : { time: b.time as Time, value: e12[i]! },
-          )
-          .filter(Boolean) as { time: Time; value: number }[],
-      );
-      s26.setData(
-        bars
-          .map((b, i) =>
-            e26[i] == null ? null : { time: b.time as Time, value: e26[i]! },
-          )
-          .filter(Boolean) as { time: Time; value: number }[],
-      );
+      s12.setData(linePoints(bars, e12));
+      s26.setData(linePoints(bars, e26));
       overlays.push(s12, s26);
     }
 
@@ -171,21 +205,36 @@ export function CandlestickChart({ bars, indicators }: Props) {
         lastValueVisible: false,
         title: "BB下",
       });
-      const toLine = (key: "upper" | "mid" | "lower") =>
+      upper.setData(
         bars
           .map((b, i) =>
-            bb[i][key] == null
+            bb[i].upper == null
               ? null
-              : { time: b.time as Time, value: bb[i][key]! },
+              : { time: b.time as Time, value: bb[i].upper! },
           )
-          .filter(Boolean) as { time: Time; value: number }[];
-      upper.setData(toLine("upper"));
-      mid.setData(toLine("mid"));
-      lower.setData(toLine("lower"));
+          .filter(Boolean) as { time: Time; value: number }[],
+      );
+      mid.setData(
+        bars
+          .map((b, i) =>
+            bb[i].mid == null
+              ? null
+              : { time: b.time as Time, value: bb[i].mid! },
+          )
+          .filter(Boolean) as { time: Time; value: number }[],
+      );
+      lower.setData(
+        bars
+          .map((b, i) =>
+            bb[i].lower == null
+              ? null
+              : { time: b.time as Time, value: bb[i].lower! },
+          )
+          .filter(Boolean) as { time: Time; value: number }[],
+      );
       overlays.push(upper, mid, lower);
     }
 
-    // Pane indicators: RSI / MACD use separate price scales
     if (indicators.rsi) {
       const r = rsi(bars, 14);
       const rsiSeries = chart.addSeries(LineSeries, {
@@ -200,16 +249,7 @@ export function CandlestickChart({ bars, indicators }: Props) {
         scaleMargins: { top: 0.72, bottom: 0.02 },
         borderVisible: false,
       });
-      candle.priceScale().applyOptions({
-        scaleMargins: { top: 0.08, bottom: 0.32 },
-      });
-      rsiSeries.setData(
-        bars
-          .map((b, i) =>
-            r[i] == null ? null : { time: b.time as Time, value: r[i]! },
-          )
-          .filter(Boolean) as { time: Time; value: number }[],
-      );
+      rsiSeries.setData(linePoints(bars, r));
       overlays.push(rsiSeries);
     }
 
@@ -242,11 +282,6 @@ export function CandlestickChart({ bars, indicators }: Props) {
         },
         borderVisible: false,
       });
-      if (!indicators.rsi) {
-        candle.priceScale().applyOptions({
-          scaleMargins: { top: 0.08, bottom: 0.32 },
-        });
-      }
       hist.setData(
         bars
           .map((b, i) => {
@@ -283,17 +318,17 @@ export function CandlestickChart({ bars, indicators }: Props) {
           )
           .filter(Boolean) as { time: Time; value: number }[],
       );
-      overlays.push(macdLine, signal);
+      overlays.push(hist, macdLine, signal);
     }
 
-    chart.timeScale().fitContent();
+    overlayRef.current = overlays;
 
-    return () => {
-      overlays.length = 0;
-      chart.remove();
-      chartRef.current = null;
-    };
-  }, [bars, indicators]);
+    // Fit once so poll updates don't reset the user's zoom.
+    if (!fittedRef.current) {
+      chart.timeScale().fitContent();
+      fittedRef.current = true;
+    }
+  }, [bars, indicators, indicatorKey]);
 
   return (
     <div
