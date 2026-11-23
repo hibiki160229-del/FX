@@ -56,8 +56,8 @@ export function HeroChartBackground({ bars }: Props) {
       timeScale: {
         visible: false,
         borderVisible: false,
-        rightOffset: 4,
-        barSpacing: 10,
+        rightOffset: 2,
+        barSpacing: 14,
         fixLeftEdge: true,
         fixRightEdge: true,
       },
@@ -66,18 +66,19 @@ export function HeroChartBackground({ bars }: Props) {
     });
     chartRef.current = chart;
 
+    // Dense recent window — larger candles read as a dominant plane
+    const slice = bars.length > 90 ? bars.slice(-90) : bars;
+
     const candle = chart.addSeries(CandlestickSeries, {
-      upColor: "rgba(47, 212, 168, 0.55)",
-      downColor: "rgba(255, 122, 110, 0.5)",
-      borderUpColor: "rgba(47, 212, 168, 0.72)",
-      borderDownColor: "rgba(255, 122, 110, 0.65)",
-      wickUpColor: "rgba(47, 212, 168, 0.45)",
-      wickDownColor: "rgba(255, 122, 110, 0.4)",
+      upColor: "rgba(47, 212, 168, 0.78)",
+      downColor: "rgba(255, 122, 110, 0.72)",
+      borderUpColor: "rgba(110, 236, 196, 0.95)",
+      borderDownColor: "rgba(255, 150, 138, 0.9)",
+      wickUpColor: "rgba(47, 212, 168, 0.7)",
+      wickDownColor: "rgba(255, 122, 110, 0.65)",
       lastValueVisible: false,
       priceLineVisible: false,
     });
-
-    const slice = bars.length > 120 ? bars.slice(-120) : bars;
     candle.setData(
       slice.map((b) => ({
         time: b.time as Time,
@@ -89,23 +90,32 @@ export function HeroChartBackground({ bars }: Props) {
     );
 
     const e21 = ema(slice, 21);
-    const trend = chart.addSeries(LineSeries, {
-      color: "rgba(126, 212, 232, 0.55)",
+    const e55 = ema(slice, 55);
+    const trendFast = chart.addSeries(LineSeries, {
+      color: "rgba(180, 236, 255, 0.78)",
       lineWidth: 2,
       lastValueVisible: false,
       priceLineVisible: false,
       crosshairMarkerVisible: false,
     });
-    trend.setData(
+    const trendSlow = chart.addSeries(LineSeries, {
+      color: "rgba(168, 224, 212, 0.45)",
+      lineWidth: 2,
+      lastValueVisible: false,
+      priceLineVisible: false,
+      crosshairMarkerVisible: false,
+    });
+    const toLine = (series: (number | null)[]) =>
       slice
         .map((b, i) =>
-          e21[i] == null ? null : { time: b.time as Time, value: e21[i]! },
+          series[i] == null ? null : { time: b.time as Time, value: series[i]! },
         )
-        .filter(Boolean) as { time: Time; value: number }[],
-    );
+        .filter(Boolean) as { time: Time; value: number }[];
+    trendFast.setData(toLine(e21));
+    trendSlow.setData(toLine(e55));
 
     candle.priceScale().applyOptions({
-      scaleMargins: { top: 0.18, bottom: 0.12 },
+      scaleMargins: { top: 0.12, bottom: 0.08 },
     });
     chart.timeScale().fitContent();
 
@@ -114,8 +124,8 @@ export function HeroChartBackground({ bars }: Props) {
     const tick = (ts: number) => {
       if (!start) start = ts;
       const t = (ts - start) / 1000;
-      // Slow breathing of bar spacing — subtle depth, not distraction
-      const spacing = 10 + Math.sin(t / 7) * 0.85;
+      // Slow breathing of bar spacing — presence without distraction
+      const spacing = 14 + Math.sin(t / 8) * 1.15;
       chart.timeScale().applyOptions({ barSpacing: spacing });
       raf = requestAnimationFrame(tick);
     };
