@@ -1,17 +1,16 @@
 import {
   cacheLiveQuote,
   consumeOandaPricingStream,
+  getCachedLiveQuote,
   isOandaConfigured,
   providerStatusFromQuote,
   resolveLiveQuote,
   type LiveQuote,
 } from "@/lib/providers";
+import { YAHOO_SSE_POLL_MS } from "@/lib/realtime/config";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-
-/** High-freq poll interval when stream host fails or is blocked. */
-const POLL_MS = 1_000;
 
 function sseEncode(event: string, data: unknown): Uint8Array {
   const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
@@ -19,25 +18,14 @@ function sseEncode(event: string, data: unknown): Uint8Array {
 }
 
 /**
- * Server-Sent Events for near-true realtime USD/JPY.
- * Prefers OANDA practice pricing stream; falls back to REST/candle poll.
+ * Server-Sent Events for near-realtime USD/JPY.
+ * Primary: Yahoo Finance poll (zero secrets).
+ * Optional: OANDA practice stream when secrets are set, then REST/S5, then Yahoo.
  */
 export async function GET(request: Request) {
-  const configured = isOandaConfigured();
-  if (!configured) {
-    return new Response(
-      JSON.stringify({
-        error: "oanda_not_configured",
-        messageJa:
-          "OANDA が未設定です。Secrets に OANDA_API_TOKEN と OANDA_ACCOUNT_ID を追加してください。",
-        status: providerStatusFromQuote(null),
-      }),
-      { status: 503, headers: { "Content-Type": "application/json" } },
-    );
-  }
-
   const abort = new AbortController();
   request.signal.addEventListener("abort", () => abort.abort());
+  const oandaConfigured = isOandaConfigured();
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -49,7 +37,12 @@ export async function GET(request: Request) {
         }
       };
 
-      send("status", providerStatusFromQuote(null));
+      send("status", {
+        ...providerStatusFromQuote(null),
+        detailJa: oandaConfigured
+          ? "接続中…（任意の OANDA ストリームを試行、失敗時は Yahoo）"
+          : "接続中…（Yahoo Finance ポーリング）",
+      });
 
       const emitQuote = (quote: LiveQuote) => {
         cacheLiveQuote(quote);
@@ -57,61 +50,67 @@ export async function GET(request: Request) {
         send("status", providerStatusFromQuote(quote));
       };
 
-      // 1) Try true pricing stream
-      let streamOk = false;
-      const result = await consumeOandaPricingStream({
-        signal: abort.signal,
-        onQuote: (q) => {
-          streamOk = true;
-          emitQuote(q);
-        },
-        onHeartbeat: () => {
-          send("heartbeat", { t: Date.now() });
-        },
-        onError: (err) => {
-          send("error", {
-            messageJa: "OANDA ストリームエラー — ポーリングに切替えます",
-            detail: err instanceof Error ? err.message : "unknown",
-          });
-        },
-      });
-
-      if (abort.signal.aborted) {
-        controller.close();
-        return;
-      }
-
-      // 2) Stream ended or failed → high-freq REST / candle poll
-      if (result !== "ok" || !streamOk) {
-        send("status", {
-          ...providerStatusFromQuote(null),
-          detailJa:
-            "ストリーム不可 — OANDA REST/S5 ポーリング（約1秒）にフォールバック",
-          mode: "poll",
-          oandaConfigured: true,
-          oandaReachable: null,
-          preferred: "oanda",
-          activeSource: "oanda",
+      // Optional OANDA stream upgrade when secrets exist
+      if (oandaConfigured) {
+        let streamOk = false;
+        const result = await consumeOandaPricingStream({
+          signal: abort.signal,
+          onQuote: (q) => {
+            streamOk = true;
+            emitQuote(q);
+          },
+          onHeartbeat: () => {
+            send("heartbeat", { t: Date.now() });
+          },
+          onError: (err) => {
+            send("error", {
+              messageJa: "OANDA ストリームエラー — Yahoo ポーリングに切替えます",
+              detail: err instanceof Error ? err.message : "unknown",
+            });
+          },
         });
+
+        if (abort.signal.aborted) {
+          controller.close();
+          return;
+        }
+
+        if (result === "ok" && streamOk) {
+          // Stream ended cleanly after quotes — fall through to poll keep-alive
+          send("status", {
+            ...providerStatusFromQuote(getCachedLiveQuote()),
+            detailJa:
+              "OANDA ストリーム終了 — Yahoo / OANDA ポーリングで継続",
+          });
+        } else if (!streamOk) {
+          send("status", {
+            ...providerStatusFromQuote(null),
+            detailJa:
+              "OANDA ストリーム不可 — Yahoo 準リアルタイム（約2秒）にフォールバック",
+            mode: "poll",
+            preferred: "yahoo",
+            activeSource: "yahoo",
+          });
+        }
       }
 
+      // Yahoo-primary poll keep-alive (OANDA remains optional via stream above)
       while (!abort.signal.aborted) {
         try {
           const quote = await resolveLiveQuote();
           if (quote) emitQuote(quote);
           else {
             send("error", {
-              messageJa:
-                "OANDA 価格を取得できません。Yahoo フォールバックを利用してください。",
+              messageJa: "ライブ価格を取得できません。OHLCV フォールバックを利用します。",
             });
           }
         } catch (err) {
           send("error", {
-            messageJa: "OANDA ポーリング失敗",
+            messageJa: "価格ポーリング失敗",
             detail: err instanceof Error ? err.message : "unknown",
           });
         }
-        await sleep(POLL_MS, abort.signal);
+        await sleep(YAHOO_SSE_POLL_MS, abort.signal);
       }
 
       try {

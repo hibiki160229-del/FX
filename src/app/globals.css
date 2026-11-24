@@ -361,9 +361,16 @@ a {
   color: var(--gold);
 }
 
-.desk__source--oanda {
-  color: rgba(126, 200, 227, 0.85);
+.desk__source--live {
   font-variant-numeric: tabular-nums;
+}
+
+.desk__source--yahoo {
+  color: rgba(126, 200, 227, 0.85);
+}
+
+.desk__source--oanda {
+  color: rgba(240, 195, 106, 0.9);
 }
 
 .desk__live {

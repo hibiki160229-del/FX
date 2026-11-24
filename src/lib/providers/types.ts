@@ -21,6 +21,7 @@ export type OhlcvResult = {
 };
 
 export type ProviderStatus = {
+  /** Default preferred feed (yahoo). OANDA remains optional when secrets exist. */
   preferred: PriceSourceId;
   oandaConfigured: boolean;
   oandaReachable: boolean | null;

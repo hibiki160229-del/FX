@@ -11,6 +11,7 @@ export {
   providerStatusFromQuote,
   resolveLiveQuote,
 } from "./live";
+export { fetchYahooLiveQuote } from "./yahoo";
 export {
   fetchOandaCandleQuote,
   fetchOandaOhlcv,
