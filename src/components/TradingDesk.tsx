@@ -20,9 +20,9 @@ import {
   DESK_OHLCV_RANGE,
   DESK_POLL_MS,
   intervalLabelJa,
-  OANDA_FRESH_MS,
-  OANDA_HIDDEN_POLL_MS,
-  OANDA_POLL_MS,
+  LIVE_FRESH_MS,
+  LIVE_HIDDEN_POLL_MS,
+  LIVE_POLL_MS,
 } from "@/lib/realtime";
 import {
   DEFAULT_RULE_SET,
@@ -114,10 +114,10 @@ export function TradingDesk({ initial }: Props) {
   }, [liveBars]);
 
   const quoteAgeMs = liveQuote ? now - liveQuote.time : Number.POSITIVE_INFINITY;
-  const oandaLive = Boolean(liveQuote && quoteAgeMs <= OANDA_FRESH_MS);
+  const quoteLive = Boolean(liveQuote && quoteAgeMs <= LIVE_FRESH_MS);
   const ohlcvAgeMs = now - payload.asOf;
   const ohlcvLive = ohlcvAgeMs <= DESK_FRESH_MS;
-  const isLive = oandaLive || ohlcvLive;
+  const isLive = quoteLive || ohlcvLive;
   const updatedAt = liveQuote?.time ?? payload.asOf;
   const intervalJa = intervalLabelJa(payload.interval);
 
@@ -183,7 +183,7 @@ export function TradingDesk({ initial }: Props) {
     };
   }, [refresh]);
 
-  // OANDA practice stream (SSE) with REST poll fallback.
+  // Live quote SSE (Yahoo primary) with REST poll fallback.
   useEffect(() => {
     let cancelled = false;
     let es: EventSource | null = null;
@@ -216,7 +216,7 @@ export function TradingDesk({ initial }: Props) {
         document.visibilityState === "hidden";
       pollTimer = setTimeout(() => {
         void pollOnce().finally(schedulePoll);
-      }, hidden ? OANDA_HIDDEN_POLL_MS : OANDA_POLL_MS);
+      }, hidden ? LIVE_HIDDEN_POLL_MS : LIVE_POLL_MS);
     };
 
     const startPoll = () => {
@@ -263,12 +263,8 @@ export function TradingDesk({ initial }: Props) {
     };
 
     void (async () => {
-      const first = await pollOnce();
+      await pollOnce();
       if (cancelled) return;
-      if (!first?.configured) {
-        // Secrets missing — stay on Yahoo OHLCV only (no tight poll)
-        return;
-      }
       startSse();
     })();
 
@@ -280,19 +276,23 @@ export function TradingDesk({ initial }: Props) {
     };
   }, []);
 
-  const liveLabel = oandaLive
-    ? liveQuote?.mode === "stream"
-      ? "OANDA ティック"
-      : liveQuote?.mode === "candle"
-        ? "OANDA S5"
-        : "OANDA ライブ"
+  const liveLabel = quoteLive
+    ? liveQuote?.source === "oanda"
+      ? liveQuote.mode === "stream"
+        ? "OANDA ティック"
+        : liveQuote.mode === "candle"
+          ? "OANDA S5"
+          : "OANDA ライブ"
+      : liveQuote?.source === "yahoo"
+        ? "Yahoo ライブ"
+        : "ライブ"
     : isLive
       ? "ライブ"
       : "遅延";
 
   const feedNote =
     providerStatus?.detailJa ??
-    "OANDA デモストリーム優先。未設定時は Yahoo 1分足ポーリング。";
+    "Yahoo Finance 準リアルタイム優先（APIキー不要）。OANDA は任意。";
 
   return (
     <div className="desk">
@@ -317,7 +317,12 @@ export function TradingDesk({ initial }: Props) {
             · {intervalJa}
           </span>
           {liveQuote && (
-            <span className="desk__source desk__source--oanda">
+            <span
+              className={`desk__source desk__source--live desk__source--${liveQuote.source}`}
+              title={feedNote}
+            >
+              {liveQuote.source === "oanda" ? "OANDA" : "Yahoo"}
+              {" · "}
               bid {liveQuote.bid.toFixed(3)} / ask {liveQuote.ask.toFixed(3)}
             </span>
           )}

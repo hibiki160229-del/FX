@@ -4,6 +4,7 @@ import {
   fetchOandaPricingQuote,
   isOandaConfigured,
 } from "./oanda";
+import { fetchYahooLiveQuote } from "./yahoo";
 
 const g = globalThis as typeof globalThis & {
   __enmyakuLiveQuote?: LiveQuote | null;
@@ -18,13 +19,23 @@ export function getCachedLiveQuote(): LiveQuote | null {
 }
 
 /**
- * Resolve a live USD/JPY quote:
- * 1. OANDA REST pricing (practice)
- * 2. OANDA S5 candle mid (if pricing blocked)
- * Returns null when credentials missing or both paths fail.
+ * Resolve a live USD/JPY quote (best-effort near-realtime):
+ * 1. Yahoo Finance chart meta poll — primary, zero secrets
+ * 2. Optional OANDA practice REST / S5 — only when secrets are set
+ * Returns null only if every available path fails.
  */
 export async function resolveLiveQuote(): Promise<LiveQuote | null> {
-  if (!isOandaConfigured()) return null;
+  try {
+    const yahoo = await fetchYahooLiveQuote();
+    if (yahoo) {
+      cacheLiveQuote(yahoo);
+      return yahoo;
+    }
+  } catch {
+    // fall through to optional OANDA
+  }
+
+  if (!isOandaConfigured()) return getCachedLiveQuote();
 
   try {
     const quote = await fetchOandaPricingQuote();
@@ -43,50 +54,53 @@ export async function resolveLiveQuote(): Promise<LiveQuote | null> {
       return quote;
     }
   } catch {
-    // give up — caller falls back to Yahoo OHLCV close
+    // give up
   }
 
-  return null;
+  return getCachedLiveQuote();
 }
 
 export function providerStatusFromQuote(
   quote: LiveQuote | null,
 ): ProviderStatus {
-  const configured = isOandaConfigured();
-  if (!configured) {
+  const oandaConfigured = isOandaConfigured();
+
+  if (quote?.source === "oanda") {
+    const modeJa =
+      quote.mode === "stream"
+        ? "ティックストリーム"
+        : quote.mode === "candle"
+          ? "S5足ポーリング"
+          : "価格ポーリング";
     return {
-      preferred: "oanda",
-      oandaConfigured: false,
+      preferred: "yahoo",
+      oandaConfigured,
+      oandaReachable: true,
+      activeSource: "oanda",
+      mode: quote.mode,
+      detailJa: `OANDA デモ（${modeJa}・任意）`,
+    };
+  }
+
+  if (quote?.source === "yahoo") {
+    return {
+      preferred: "yahoo",
+      oandaConfigured,
       oandaReachable: null,
       activeSource: "yahoo",
-      mode: "ohlcv",
-      detailJa:
-        "OANDA 未設定 — Yahoo ポーリングを使用中。Secrets に OANDA_API_TOKEN / OANDA_ACCOUNT_ID を追加してください。",
+      mode: quote.mode,
+      detailJa: "Yahoo Finance 準リアルタイム（約1–5秒ポーリング・APIキー不要）",
     };
   }
-  if (!quote) {
-    return {
-      preferred: "oanda",
-      oandaConfigured: true,
-      oandaReachable: false,
-      activeSource: "yahoo",
-      mode: "ohlcv",
-      detailJa:
-        "OANDA に接続できません — Yahoo にフォールバック中。api-fxpractice.oanda.com / stream-fxpractice.oanda.com を確認してください。",
-    };
-  }
-  const modeJa =
-    quote.mode === "stream"
-      ? "ティックストリーム"
-      : quote.mode === "candle"
-        ? "S5足ポーリング"
-        : "価格ポーリング";
+
   return {
-    preferred: "oanda",
-    oandaConfigured: true,
-    oandaReachable: true,
-    activeSource: "oanda",
-    mode: quote.mode,
-    detailJa: `OANDA デモ（${modeJa}）`,
+    preferred: "yahoo",
+    oandaConfigured,
+    oandaReachable: oandaConfigured ? false : null,
+    activeSource: null,
+    mode: null,
+    detailJa: oandaConfigured
+      ? "価格取得失敗 — Yahoo / OANDA を再試行中"
+      : "価格取得失敗 — Yahoo を再試行中（OANDA は任意・未設定でも動作）",
   };
 }

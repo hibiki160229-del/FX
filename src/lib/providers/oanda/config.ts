@@ -1,5 +1,7 @@
 /**
- * OANDA fxTrade Practice (demo) endpoints.
+ * OANDA fxTrade Practice (demo) endpoints — optional / soft-deprecated.
+ * Primary live feed is Yahoo Finance (no secrets). Keep these only if
+ * practice API credentials are available (not required for Japan Pro accounts).
  * @see https://developer.oanda.com/rest-live-v20/development-guide/
  */
 

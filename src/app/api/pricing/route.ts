@@ -5,7 +5,6 @@ import {
 } from "@/lib/analysis/rate-limit";
 import {
   getCachedLiveQuote,
-  isOandaConfigured,
   providerStatusFromQuote,
   resolveLiveQuote,
 } from "@/lib/providers";
@@ -14,7 +13,7 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-/** Snapshot live USD/JPY quote (OANDA practice → null if unavailable). */
+/** Snapshot live USD/JPY quote (Yahoo primary → optional OANDA). */
 export async function GET(request: Request) {
   const key = `pricing:${clientKeyFromRequest(request)}`;
   const rl = takeRateLimit(key, OHLCV_RATE_LIMIT.limit, OHLCV_RATE_LIMIT.windowMs);
@@ -33,18 +32,8 @@ export async function GET(request: Request) {
     );
   }
 
-  const configured = isOandaConfigured();
-  if (!configured) {
-    return NextResponse.json({
-      configured: false,
-      quote: null,
-      status: providerStatusFromQuote(null),
-    });
-  }
-
   let quote = getCachedLiveQuote();
-  const stale =
-    !quote || Date.now() - quote.time > 5_000;
+  const stale = !quote || Date.now() - quote.time > 5_000;
   if (stale) {
     try {
       quote = await resolveLiveQuote();
@@ -54,6 +43,7 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.json({
+    /** Always true — free Yahoo path needs no secrets. */
     configured: true,
     quote,
     status: providerStatusFromQuote(quote),
