@@ -97,11 +97,9 @@ export type SignalRuleSet = {
 };
 
 /**
- * Live defaults after YouTube full-watch pass (クロユキ deep + Rayner slices).
- * Winners: FXism MA5/12, クロユキ RSI9 20/80,
- * 迷晴れ/Rayner consol_break 8/1.5 (fight-zone), Rayner bb_squeeze_break 20×2/LB8,
- * Rayner inside_bar_break + SMA10, Rayner bb_touch 20×2.5,
- * Rayner false_break LB20.
+ * Live H1 desk defaults after YouTube TF-policy retest (pass11).
+ * High-WR keep rule: floors + wr≥50% + n≥20 on the method's TF.
+ * H1: RSI2 30/70 replaces fragile RSI9 20/80 (n=8); other H1 winners unchanged.
  */
 export const DEFAULT_RULE_SET: SignalRuleSet = {
   version: 1,
@@ -123,7 +121,8 @@ export const DEFAULT_RULE_SET: SignalRuleSet = {
       id: "rsi_reversal",
       labelJa: "RSI反転",
       enabled: true,
-      params: { period: 9, oversold: 20, overbought: 80 },
+      // TF-policy pass11: RSI2 30/70 (wr~62% n=89) beats fragile RSI9 20/80 (n=8)
+      params: { period: 2, oversold: 30, overbought: 70 },
     },
     {
       id: "macd_hist_flip",
@@ -135,7 +134,7 @@ export const DEFAULT_RULE_SET: SignalRuleSet = {
       id: "bb_touch",
       labelJa: "ボリンジャー接触",
       enabled: true,
-      // Rayner BB stretch (CxFv): 2.5σ beats prior 水島 2.0 on H1 floors
+      // Rayner BB stretch: 2.5σ best high-WR on H1 (wr~72% n=47)
       params: { period: 20, mult: 2.5 },
     },
     {
@@ -147,8 +146,7 @@ export const DEFAULT_RULE_SET: SignalRuleSet = {
     {
       id: "swing_break",
       labelJa: "スイングブレイク",
-      // Rayner Donchian/futures trend (ggnIGZiDoFY): LB100 close break
-      // beats prior disabled LB20+200SMA on H1 floors (score ~0.69)
+      // Rayner Donchian LB100 (H1); other TFs often fail wr floor
       enabled: true,
       params: { lookback: 100 },
     },
@@ -156,36 +154,131 @@ export const DEFAULT_RULE_SET: SignalRuleSet = {
       id: "consol_break",
       labelJa: "停滞ブレイク",
       enabled: true,
-      // 迷晴れ fight-zone before real breakout (sfR6) + Rayner vol contraction:
-      // window8 / ATR×1.5 beats prior 5/1.2 on H1 (score ~0.66 vs ~0.51; n=11)
+      // 迷晴れ fight-zone: window8 / ATR×1.5 on H1
       params: { window: 8, maxRangeAtr: 1.5, atrPeriod: 14 },
     },
     {
       id: "inside_bar_break",
       labelJa: "インサイドバーブレイク",
       enabled: true,
-      // 水島 TL+SMA21 pullback confluence / 迷晴れ H4 SMA21:
-      // SMA21 beats prior SMA10 on H1 (score ~0.57 vs ~0.52; n=49)
+      // 水島/迷晴れ: SMA21 on H1
       params: { maPeriod: 21, maKind: "sma" },
     },
     {
       id: "bb_squeeze_break",
       labelJa: "BBスクイーズブレイク",
       enabled: true,
-      // 迷晴れ BB lifecycle / Rayner ATR low-vol breakout: LB8 beats prior LB12
-      // on H1 floors (score ~0.65 vs ~0.63; n=66)
+      // LB8 keeps best composite on H1 (LB12 hits wr=50% but lower score)
       params: { period: 20, mult: 2, lookback: 8 },
     },
     {
       id: "false_break",
       labelJa: "フェイクブレイク反転",
       enabled: true,
-      // Rayner false break / 迷晴れ battle-retest / Rion ceiling pin:
-      // LB12 beats prior LB20 on H1 (score ~0.73 vs ~0.71; n=133)
+      // LB12 best high-WR on H1 (wr~66% n=133)
       params: { lookback: 12 },
     },
   ],
 };
+
+function overlayRuleSet(
+  base: SignalRuleSet,
+  patches: Partial<
+    Record<
+      RuleId,
+      { enabled?: boolean; params?: RuleParams[RuleId] }
+    >
+  >,
+): SignalRuleSet {
+  return {
+    version: 1,
+    pair: "USD/JPY",
+    rules: base.rules.map((r) => {
+      const p = patches[r.id];
+      if (!p) return { ...r, params: { ...r.params } as never };
+      return {
+        ...r,
+        enabled: p.enabled ?? r.enabled,
+        params: (p.params ?? r.params) as never,
+      };
+    }),
+  };
+}
+
+/**
+ * Per-interval packs from TF-policy retest (high-WR keeps).
+ * Use `getRuleSetForInterval` when analyzing / enabling signals on a TF.
+ */
+export const RULE_SETS_BY_INTERVAL: Record<string, SignalRuleSet> = {
+  // Desk/analysis H1
+  "1h": DEFAULT_RULE_SET,
+  "60m": DEFAULT_RULE_SET,
+  // 5m: 水島 flag consol + BB±1σ + longer FB lookback
+  "5m": overlayRuleSet(DEFAULT_RULE_SET, {
+    bb_touch: { enabled: true, params: { period: 20, mult: 1 } },
+    false_break: { enabled: true, params: { lookback: 50 } },
+    consol_break: {
+      enabled: true,
+      params: { window: 6, maxRangeAtr: 1.2, atrPeriod: 14 },
+    },
+    // H1-tuned rules often fail wr on 5m
+    swing_break: { enabled: false },
+    inside_bar_break: { enabled: false },
+    rsi_reversal: { enabled: false },
+    ma_cross: { enabled: false },
+    bb_squeeze_break: { enabled: false },
+  }),
+  // 15m: Oikawa M15 context — BB×1 + FB LB50
+  "15m": overlayRuleSet(DEFAULT_RULE_SET, {
+    bb_touch: { enabled: true, params: { period: 20, mult: 1 } },
+    false_break: { enabled: true, params: { lookback: 50 } },
+    swing_break: { enabled: false },
+    inside_bar_break: { enabled: false },
+    rsi_reversal: { enabled: false },
+    ma_cross: { enabled: false },
+    consol_break: { enabled: false },
+    bb_squeeze_break: { enabled: false },
+  }),
+  // 30m: BB×1 + FB LB30
+  "30m": overlayRuleSet(DEFAULT_RULE_SET, {
+    bb_touch: { enabled: true, params: { period: 20, mult: 1 } },
+    false_break: { enabled: true, params: { lookback: 30 } },
+    swing_break: { enabled: false },
+    inside_bar_break: { enabled: false },
+    rsi_reversal: { enabled: false },
+    ma_cross: { enabled: false },
+    consol_break: { enabled: false },
+    bb_squeeze_break: { enabled: false },
+  }),
+  // 4h: 迷晴れ/水島 H4 — BB×1.5 + FB LB16
+  "4h": overlayRuleSet(DEFAULT_RULE_SET, {
+    bb_touch: { enabled: true, params: { period: 20, mult: 1.5 } },
+    false_break: { enabled: true, params: { lookback: 16 } },
+    swing_break: { enabled: false },
+    inside_bar_break: { enabled: false },
+    rsi_reversal: { enabled: false },
+    ma_cross: { enabled: false },
+    consol_break: { enabled: false },
+    bb_squeeze_break: { enabled: false },
+  }),
+  // 1d: BB×1 + FB LB14
+  "1d": overlayRuleSet(DEFAULT_RULE_SET, {
+    bb_touch: { enabled: true, params: { period: 20, mult: 1 } },
+    false_break: { enabled: true, params: { lookback: 14 } },
+    swing_break: { enabled: false },
+    inside_bar_break: { enabled: false },
+    rsi_reversal: { enabled: false },
+    ma_cross: { enabled: false },
+    consol_break: { enabled: false },
+    bb_squeeze_break: { enabled: false },
+  }),
+};
+
+/** Resolve rule pack for a Yahoo/OANDA interval string. */
+export function getRuleSetForInterval(interval: string): SignalRuleSet {
+  const key = interval === "60m" ? "1h" : interval;
+  return RULE_SETS_BY_INTERVAL[key] ?? DEFAULT_RULE_SET;
+}
 
 export function getRule<K extends RuleId>(
   set: SignalRuleSet,

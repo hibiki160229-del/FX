@@ -52,6 +52,7 @@ export const INTERVAL_LABEL_JA: Record<string, string> = {
   "30m": "30分足",
   "60m": "1時間足",
   "1h": "1時間足",
+  "4h": "4時間足",
   "1d": "日足",
 };
 

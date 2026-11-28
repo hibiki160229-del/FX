@@ -717,6 +717,12 @@ export function youtubeCandidates(): RuleCandidate[] {
       "クロユキFX",
       "RSI9 深め帯（20/80）",
     ),
+    yt(
+      "rsi_reversal",
+      { period: 2, oversold: 30, overbought: 70 },
+      "クロユキFX",
+      "TF-policy H1 high-WR: RSI2 30/70 (n≫ RSI9)",
+    ),
   );
 
   // —— 6. 迷晴れFX ——
