@@ -92,5 +92,30 @@ export function searchCandidates(): RuleCandidate[] {
     }
   }
 
+  for (const lookback of [12, 20, 34, 55]) {
+    out.push(
+      cand("swing_break", { lookback }, `探索 スイングLB${lookback}`),
+    );
+    out.push(
+      cand(
+        "swing_break",
+        { lookback, trendPeriod: 200, trendKind: "sma" },
+        `探索 スイングLB${lookback}+200SMA`,
+      ),
+    );
+  }
+
+  for (const window of [5, 7, 10]) {
+    for (const maxRangeAtr of [1.0, 1.2, 1.5]) {
+      out.push(
+        cand(
+          "consol_break",
+          { window, maxRangeAtr, atrPeriod: 14 },
+          `探索 停滞${window}/ATR×${maxRangeAtr}`,
+        ),
+      );
+    }
+  }
+
   return dedupe(out);
 }

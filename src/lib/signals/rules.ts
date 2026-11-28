@@ -1,4 +1,4 @@
-import { bollinger, ema, macd, rsi, sma } from "@/lib/indicators";
+import { atr, bollinger, ema, macd, rsi, sma } from "@/lib/indicators";
 import type { OhlcvBar, SignalHint } from "@/lib/types";
 import {
   DEFAULT_RULE_SET,
@@ -253,6 +253,103 @@ export function evaluateSignals(
           strength: 0.78,
           at,
         });
+      }
+    }
+  }
+
+  const swingRule = getRule(ruleSet, "swing_break");
+  if (swingRule?.enabled) {
+    const { lookback, trendPeriod, trendKind } = swingRule.params;
+    if (i >= lookback + 1) {
+      let priorHigh = -Infinity;
+      let priorLow = Infinity;
+      for (let j = i - lookback; j < i; j++) {
+        if (bars[j].high > priorHigh) priorHigh = bars[j].high;
+        if (bars[j].low < priorLow) priorLow = bars[j].low;
+      }
+      const prevClose = bars[prev].close;
+      let trendOkLong = true;
+      let trendOkShort = true;
+      if (trendPeriod && trendPeriod > 0) {
+        const kind = trendKind ?? "sma";
+        const trend =
+          kind === "ema" ? ema(bars, trendPeriod) : sma(bars, trendPeriod);
+        const t = trend[i];
+        const tPrev = trend[Math.max(0, i - 5)];
+        if (t == null || tPrev == null) {
+          trendOkLong = false;
+          trendOkShort = false;
+        } else {
+          const flatTol = Math.abs(t) * 1e-5;
+          if (Math.abs(t - tPrev) < flatTol) {
+            trendOkLong = false;
+            trendOkShort = false;
+          } else {
+            trendOkLong = close >= t && t > tPrev;
+            trendOkShort = close <= t && t < tPrev;
+          }
+        }
+      }
+      if (trendOkLong && prevClose <= priorHigh && close > priorHigh) {
+        hints.push({
+          id: "swing-break-long",
+          side: "long",
+          title: "スイング高値ブレイク",
+          reason: `直近${lookback}本の高値を終値で上抜け。押し安値／戻り高値構造の順張りブレイク近似です。`,
+          strength: 0.8,
+          at,
+        });
+      }
+      if (trendOkShort && prevClose >= priorLow && close < priorLow) {
+        hints.push({
+          id: "swing-break-short",
+          side: "short",
+          title: "スイング安値ブレイク",
+          reason: `直近${lookback}本の安値を終値で下抜け。押し安値ブレイク後の順張り近似です。`,
+          strength: 0.8,
+          at,
+        });
+      }
+    }
+  }
+
+  const consolRule = getRule(ruleSet, "consol_break");
+  if (consolRule?.enabled) {
+    const { window, maxRangeAtr, atrPeriod } = consolRule.params;
+    if (i >= window + 1 && i >= atrPeriod + 1) {
+      const atrSeries = atr(bars, atrPeriod);
+      const a = atrSeries[i];
+      if (a != null && a > 0) {
+        let hi = -Infinity;
+        let lo = Infinity;
+        for (let j = i - window; j < i; j++) {
+          if (bars[j].high > hi) hi = bars[j].high;
+          if (bars[j].low < lo) lo = bars[j].low;
+        }
+        const range = hi - lo;
+        const open = bars[i].open;
+        if (range <= maxRangeAtr * a) {
+          if (close > hi && open <= hi) {
+            hints.push({
+              id: "consol-break-long",
+              side: "long",
+              title: "停滞ブレイク（上）",
+              reason: `${window}本の停滞レンジを実体で上抜け。短期モメンタムの抜けヒントです。`,
+              strength: 0.72,
+              at,
+            });
+          }
+          if (close < lo && open >= lo) {
+            hints.push({
+              id: "consol-break-short",
+              side: "short",
+              title: "停滞ブレイク（下）",
+              reason: `${window}本の停滞レンジを実体で下抜け。短期モメンタムの抜けヒントです。`,
+              strength: 0.72,
+              at,
+            });
+          }
+        }
       }
     }
   }

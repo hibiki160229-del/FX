@@ -1,4 +1,4 @@
-import { bollinger, ema, macd, rsi, sma } from "@/lib/indicators";
+import { atr, bollinger, ema, macd, rsi, sma } from "@/lib/indicators";
 import type { OhlcvBar, SignalSide } from "@/lib/types";
 import type { RuleDefinition, RuleId, RuleParams } from "@/lib/signals";
 
@@ -135,6 +135,63 @@ export function sideAtBar(
       ) {
         return "short";
       }
+      return null;
+    }
+    case "swing_break": {
+      const { lookback, trendPeriod, trendKind } =
+        rule.params as RuleParams["swing_break"];
+      if (i < lookback + 1) return null;
+      let priorHigh = -Infinity;
+      let priorLow = Infinity;
+      for (let j = i - lookback; j < i; j++) {
+        if (bars[j].high > priorHigh) priorHigh = bars[j].high;
+        if (bars[j].low < priorLow) priorLow = bars[j].low;
+      }
+      const close = bars[i].close;
+      const prevClose = bars[prev].close;
+      let trendOkLong = true;
+      let trendOkShort = true;
+      if (trendPeriod && trendPeriod > 0) {
+        const kind = trendKind ?? "sma";
+        const trend = kind === "ema" ? ema(bars, trendPeriod) : sma(bars, trendPeriod);
+        const t = trend[i];
+        const tPrev = trend[Math.max(0, i - 5)];
+        if (t == null || tPrev == null) return null;
+        // Kuroyuki: skip flat 200; require clear slope
+        const flatTol = Math.abs(t) * 1e-5;
+        if (Math.abs(t - tPrev) < flatTol) return null;
+        trendOkLong = close >= t && t > tPrev;
+        trendOkShort = close <= t && t < tPrev;
+      }
+      if (trendOkLong && prevClose <= priorHigh && close > priorHigh) {
+        return "long";
+      }
+      if (trendOkShort && prevClose >= priorLow && close < priorLow) {
+        return "short";
+      }
+      return null;
+    }
+    case "consol_break": {
+      const { window, maxRangeAtr, atrPeriod } =
+        rule.params as RuleParams["consol_break"];
+      if (i < window + 1 || i < atrPeriod + 1) return null;
+      const atrSeries = atr(bars, atrPeriod);
+      const a = atrSeries[i];
+      if (a == null || a <= 0) return null;
+      // Consolidation over bars [i-window, i-1]
+      let hi = -Infinity;
+      let lo = Infinity;
+      for (let j = i - window; j < i; j++) {
+        if (bars[j].high > hi) hi = bars[j].high;
+        if (bars[j].low < lo) lo = bars[j].low;
+      }
+      const range = hi - lo;
+      if (range > maxRangeAtr * a) return null;
+      const close = bars[i].close;
+      const open = bars[i].open;
+      // Body must clear the consolidation zone (Kuroyuki: 実体で抜け)
+      if (close > hi && open <= hi) return "long";
+      if (close < lo && open >= lo) return "short";
       return null;
     }
     default:
@@ -304,6 +361,9 @@ export function makeSideLookup(
         return null;
       };
     }
+    case "swing_break":
+    case "consol_break":
+      return (i) => sideAtBar(bars, i, def);
     default:
       return (i) => sideAtBar(bars, i, def);
   }

@@ -10,7 +10,9 @@ export type RuleId =
   | "rsi_reversal"
   | "macd_hist_flip"
   | "bb_touch"
-  | "ma_bounce";
+  | "ma_bounce"
+  | "swing_break"
+  | "consol_break";
 
 export type RuleParams = {
   ma_cross: { fast: number; slow: number };
@@ -26,6 +28,24 @@ export type RuleParams = {
     period: number;
     kind: "sma" | "ema";
     trendPeriod?: number;
+  };
+  /**
+   * Structure: close breaks N-bar swing high/low (押し安値/戻り高値近似).
+   * Optional slow MA slope filter (クロユキ 200SMA 目線).
+   */
+  swing_break: {
+    lookback: number;
+    trendPeriod?: number;
+    trendKind?: "sma" | "ema";
+  };
+  /**
+   * Structure: tight consolidation then body breakout (クロユキ 停滞→抜け).
+   * `window` bars' high-low range must be ≤ `maxRangeAtr` × ATR before break.
+   */
+  consol_break: {
+    window: number;
+    maxRangeAtr: number;
+    atrPeriod: number;
   };
 };
 
@@ -44,10 +64,10 @@ export type SignalRuleSet = {
 };
 
 /**
- * Live defaults after YouTube first-batch backtest (USD/JPY 6mo 1h).
- * Winners promoted: FXism MA5/12, Rayner RSI14 30/70, 水島/共有 BB20×2.
- * ema_cross / macd / ma_bounce stay in the catalog but disabled until a
- * later analysis pass promotes a floor-passing variant.
+ * Live defaults after YouTube full-watch pass (クロユキ deep + batch1).
+ * Winners: FXism MA5/12, クロユキ RSI9 20/80, 水島 BB20×2,
+ * クロユキ consol_break 5/1.2. Structure swing_break stays catalog-only
+ * until a floor-passing lookback lands.
  */
 export const DEFAULT_RULE_SET: SignalRuleSet = {
   version: 1,
@@ -69,7 +89,7 @@ export const DEFAULT_RULE_SET: SignalRuleSet = {
       id: "rsi_reversal",
       labelJa: "RSI反転",
       enabled: true,
-      params: { period: 14, oversold: 30, overbought: 70 },
+      params: { period: 9, oversold: 20, overbought: 80 },
     },
     {
       id: "macd_hist_flip",
@@ -88,6 +108,18 @@ export const DEFAULT_RULE_SET: SignalRuleSet = {
       labelJa: "MA押し目バウンス",
       enabled: false,
       params: { period: 50, kind: "ema", trendPeriod: 200 },
+    },
+    {
+      id: "swing_break",
+      labelJa: "スイングブレイク",
+      enabled: false,
+      params: { lookback: 20, trendPeriod: 200, trendKind: "sma" },
+    },
+    {
+      id: "consol_break",
+      labelJa: "停滞ブレイク",
+      enabled: true,
+      params: { window: 5, maxRangeAtr: 1.2, atrPeriod: 14 },
     },
   ],
 };

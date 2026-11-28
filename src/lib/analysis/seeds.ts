@@ -9,6 +9,8 @@ const LABELS: Record<RuleId, string> = {
   macd_hist_flip: "MACDヒストグラム転換",
   bb_touch: "ボリンジャー接触",
   ma_bounce: "MA押し目バウンス",
+  swing_break: "スイングブレイク",
+  consol_break: "停滞ブレイク",
 };
 
 function cand(
@@ -113,6 +115,19 @@ export function seedCandidates(): RuleCandidate[] {
     ),
     cand("ma_bounce", { period: 20, kind: "sma" }, "seed", "SMA20バウンス"),
     cand("ma_bounce", { period: 200, kind: "sma" }, "seed", "SMA200バウンス"),
+    cand(
+      "swing_break",
+      { lookback: 20, trendPeriod: 200, trendKind: "sma" },
+      "seed",
+      "スイング20＋200SMA",
+    ),
+    cand("swing_break", { lookback: 20 }, "seed", "スイング20"),
+    cand(
+      "consol_break",
+      { window: 5, maxRangeAtr: 1.2, atrPeriod: 14 },
+      "seed",
+      "停滞5本ブレイク",
+    ),
   );
 
   return dedupe(out);
