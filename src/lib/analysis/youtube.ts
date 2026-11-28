@@ -415,6 +415,42 @@ export function youtubeCandidates(): RuleCandidate[] {
       "Rayner Teo",
       "強トレンド20EMA押し＋50EMA方向（KGSdkf / hvjOEWm）",
     ),
+    yt(
+      "ma_cross",
+      { fast: 20, slow: 100 },
+      "Rayner Teo",
+      "SMA20/100 短期×中期（EbFUuSmuhVs トレンド定義）",
+    ),
+    yt(
+      "ma_cross",
+      { fast: 100, slow: 200 },
+      "Rayner Teo",
+      "SMA100/200 中期×長期（EbFUu）",
+    ),
+    yt(
+      "ema_cross",
+      { fast: 20, slow: 50 },
+      "Rayner Teo",
+      "EMA20/50 トレンド終焉・収縮（wYSyCuM72i0）",
+    ),
+    yt(
+      "swing_break",
+      { lookback: 20, trendPeriod: 100, trendKind: "sma" },
+      "Rayner Teo",
+      "Donchian20＋SMA100フィルタ",
+    ),
+    yt(
+      "false_break",
+      { lookback: 20, trendPeriod: 50, trendKind: "ema" },
+      "Rayner Teo",
+      "フェイクブレイク＋EMA50（wYSy / hvjOE）",
+    ),
+    yt(
+      "ma_cross",
+      { fast: 5, slow: 25 },
+      "JIN FX",
+      "SMA5/25ゴールデンクロス（nIYCWAlghhE TradingView応用）",
+    ),
   );
 
   // —— 2. オレ的ゲーム速報JIN FX ——
