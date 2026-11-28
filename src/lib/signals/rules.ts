@@ -470,6 +470,65 @@ export function evaluateSignals(
     }
   }
 
+  const fbRule = getRule(ruleSet, "false_break");
+  if (fbRule?.enabled) {
+    const { lookback, trendPeriod, trendKind } = fbRule.params;
+    if (i >= lookback + 1) {
+      let priorHigh = -Infinity;
+      let priorLow = Infinity;
+      for (let j = i - lookback; j < i; j++) {
+        if (bars[j].high > priorHigh) priorHigh = bars[j].high;
+        if (bars[j].low < priorLow) priorLow = bars[j].low;
+      }
+      const bar = bars[i];
+      let trendOkLong = true;
+      let trendOkShort = true;
+      if (trendPeriod && trendPeriod > 0) {
+        const kind = trendKind ?? "sma";
+        const trend =
+          kind === "ema" ? ema(bars, trendPeriod) : sma(bars, trendPeriod);
+        const t = trend[i];
+        if (t == null) {
+          trendOkLong = false;
+          trendOkShort = false;
+        } else {
+          trendOkLong = close >= t;
+          trendOkShort = close <= t;
+        }
+      }
+      // False break long: pierce prior swing low then close back above (reclaim)
+      if (
+        trendOkLong &&
+        bar.low < priorLow &&
+        bar.close > priorLow
+      ) {
+        hints.push({
+          id: "false-break-long",
+          side: "long",
+          title: "フェイクブレイク反転（上）",
+          reason: `直近${lookback}本安値をヒゲで下抜けた後に終値で奪回。トラップドトレーダーからの反転ロング近似です。`,
+          strength: 0.76,
+          at,
+        });
+      }
+      // False break short: pierce prior swing high then close back below
+      if (
+        trendOkShort &&
+        bar.high > priorHigh &&
+        bar.close < priorHigh
+      ) {
+        hints.push({
+          id: "false-break-short",
+          side: "short",
+          title: "フェイクブレイク反転（下）",
+          reason: `直近${lookback}本高値をヒゲで上抜けた後に終値で奪回。トラップドトレーダーからの反転ショート近似です。`,
+          strength: 0.76,
+          at,
+        });
+      }
+    }
+  }
+
   return hints.sort((a, b) => b.strength - a.strength);
 }
 

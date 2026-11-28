@@ -141,5 +141,23 @@ export function searchCandidates(): RuleCandidate[] {
     );
   }
 
+  for (const lookback of [5, 10, 15, 20]) {
+    out.push(cand("false_break", { lookback }, `探索 FB LB${lookback}`));
+    out.push(
+      cand(
+        "false_break",
+        { lookback, trendPeriod: 50, trendKind: "sma" },
+        `探索 FB LB${lookback}+SMA50`,
+      ),
+    );
+    out.push(
+      cand(
+        "false_break",
+        { lookback, trendPeriod: 20, trendKind: "sma" },
+        `探索 FB LB${lookback}+SMA20`,
+      ),
+    );
+  }
+
   return dedupe(out);
 }

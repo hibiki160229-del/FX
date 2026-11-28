@@ -14,7 +14,8 @@ export type RuleId =
   | "swing_break"
   | "consol_break"
   | "inside_bar_break"
-  | "bb_squeeze_break";
+  | "bb_squeeze_break"
+  | "false_break";
 
 export type RuleParams = {
   ma_cross: { fast: number; slow: number };
@@ -70,6 +71,15 @@ export type RuleParams = {
     mult: number;
     lookback: number;
   };
+  /**
+   * Rayner false break / trapped traders: pierce prior swing high/low then
+   * close back inside (rejection reclaim). Optional slow MA trend filter.
+   */
+  false_break: {
+    lookback: number;
+    trendPeriod?: number;
+    trendKind?: "sma" | "ema";
+  };
 };
 
 export type RuleDefinition<K extends RuleId = RuleId> = {
@@ -87,10 +97,11 @@ export type SignalRuleSet = {
 };
 
 /**
- * Live defaults after YouTube full-watch pass (クロユキ deep + Rayner slice).
- * Winners: FXism MA5/12, クロユキ RSI9 20/80, 水島 BB20×2,
+ * Live defaults after YouTube full-watch pass (クロユキ deep + Rayner slices).
+ * Winners: FXism MA5/12, クロユキ RSI9 20/80,
  * クロユキ consol_break 5/1.2, Rayner bb_squeeze_break 20×2/LB12,
- * Rayner inside_bar_break + SMA10, Rayner bb_touch 20×2.5.
+ * Rayner inside_bar_break + SMA10, Rayner bb_touch 20×2.5,
+ * Rayner false_break LB20.
  */
 export const DEFAULT_RULE_SET: SignalRuleSet = {
   version: 1,
@@ -156,6 +167,13 @@ export const DEFAULT_RULE_SET: SignalRuleSet = {
       labelJa: "BBスクイーズブレイク",
       enabled: true,
       params: { period: 20, mult: 2, lookback: 12 },
+    },
+    {
+      id: "false_break",
+      labelJa: "フェイクブレイク反転",
+      enabled: true,
+      // Rayner false break / trapped traders (ScxDv / up0Em / GS3-f)
+      params: { lookback: 20 },
     },
   ],
 };
