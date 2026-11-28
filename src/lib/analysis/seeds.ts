@@ -164,6 +164,7 @@ export function seedCandidates(): RuleCandidate[] {
       "seed",
       "BBスクイーズ20",
     ),
+    cand("false_break", { lookback: 12 }, "seed", "FB LB12"),
     cand("false_break", { lookback: 10 }, "seed", "FB LB10"),
     cand("false_break", { lookback: 20 }, "seed", "FB LB20"),
     cand(

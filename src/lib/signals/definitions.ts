@@ -178,8 +178,9 @@ export const DEFAULT_RULE_SET: SignalRuleSet = {
       id: "false_break",
       labelJa: "フェイクブレイク反転",
       enabled: true,
-      // Rayner false break / trapped traders (ScxDv / up0Em / GS3-f)
-      params: { lookback: 20 },
+      // Rayner false break / 迷晴れ battle-retest / Rion ceiling pin:
+      // LB12 beats prior LB20 on H1 (score ~0.73 vs ~0.71; n=133)
+      params: { lookback: 12 },
     },
   ],
 };
