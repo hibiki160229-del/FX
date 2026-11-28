@@ -402,7 +402,8 @@ export function AutoAnalysis({ ruleSet, onRuleSetChange }: Props) {
             <span>
               下限: 取引≥{result.floors.minTrades} / DD≤
               {(result.floors.maxDrawdown * 100).toFixed(0)}% / 勝率≥
-              {(result.floors.minWinRate * 100).toFixed(0)}%
+              {(result.floors.minWinRate * 100).toFixed(0)}% / リターン&gt;
+              {(result.floors.minReturn * 100).toFixed(0)}%
             </span>
             <span>{result.extraction.noteJa}</span>
           </div>

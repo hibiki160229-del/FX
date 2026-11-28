@@ -21,6 +21,14 @@ export function checkFloors(
       `勝率 ${(metrics.winRate * 100).toFixed(0)}% < ${(floors.minWinRate * 100).toFixed(0)}%`,
     );
   }
+  // Exclusive: return must beat minReturn (default 0 → require profit).
+  if (!(metrics.totalReturn > floors.minReturn)) {
+    failReasons.push(
+      metrics.totalReturn <= 0
+        ? `リターン ${(metrics.totalReturn * 100).toFixed(2)}% ≤ 0%（損失/ゼロ）`
+        : `リターン ${(metrics.totalReturn * 100).toFixed(2)}% ≤ 下限 ${(floors.minReturn * 100).toFixed(2)}%`,
+    );
+  }
   return { passed: failReasons.length === 0, failReasons };
 }
 

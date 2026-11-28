@@ -30,4 +30,4 @@ export type {
   ScoreFloors,
   ScoreMetrics,
 } from "./types";
-export { DEFAULT_SCORE_FLOORS } from "./types";
+export { DEFAULT_SCORE_FLOORS, PREFERRED_MIN_TRADES } from "./types";

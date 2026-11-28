@@ -11,6 +11,9 @@ export const dynamic = "force-dynamic";
 const ALLOWED_RANGES = new Set([
   "1d",
   "5d",
+  "7d",
+  "8d",
+  "60d",
   "1mo",
   "3mo",
   "6mo",
