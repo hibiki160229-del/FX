@@ -331,6 +331,48 @@ export function youtubeCandidates(): RuleCandidate[] {
       "Rayner Teo",
       "ダブルトップ/H&S等のビルドアップ抜け近似（DF9u / T5uZ）",
     ),
+    yt(
+      "consol_break",
+      { window: 20, maxRangeAtr: 1.5, atrPeriod: 14 },
+      "Rayner Teo",
+      "ビルドアップ〜20本+20MA近似（OrGChv83PDI sniper）",
+    ),
+    yt(
+      "consol_break",
+      { window: 40, maxRangeAtr: 2.0, atrPeriod: 14 },
+      "Rayner Teo",
+      "ビルドアップ〜40本近似（OrGChv sniper）",
+    ),
+    yt(
+      "consol_break",
+      { window: 80, maxRangeAtr: 2.5, atrPeriod: 14 },
+      "Rayner Teo",
+      "ビルドアップ≥80本近似（OrGChv83PDI）",
+    ),
+    yt(
+      "consol_break",
+      { window: 20, maxRangeAtr: 1.2, atrPeriod: 14 },
+      "Rayner Teo",
+      "ビルドアップ20本 ATR×1.2（対照）",
+    ),
+    yt(
+      "ma_bounce",
+      { period: 20, kind: "ema" },
+      "Rayner Teo",
+      "初回押し目20EMA（OrGChv / 7dPta sniper pullback）",
+    ),
+    yt(
+      "false_break",
+      { lookback: 20, trendPeriod: 20, trendKind: "ema" },
+      "Rayner Teo",
+      "フェイクブレイク＋EMA20（OrGChv sniper合流）",
+    ),
+    yt(
+      "rsi_reversal",
+      { period: 14, oversold: 25, overbought: 80 },
+      "FXism 及川圭哉",
+      "RSI14 25/80（ahxEp95OjPo・ワイルダー70失敗回避）",
+    ),
   );
 
   // —— 2. オレ的ゲーム速報JIN FX ——
