@@ -89,12 +89,22 @@ export function sideAtBar(
       return null;
     }
     case "bb_touch": {
-      const { period, mult } = rule.params as RuleParams["bb_touch"];
+      const { period, mult, trendPeriod } =
+        rule.params as RuleParams["bb_touch"];
       const bb = bollinger(bars, period, mult);
       if (bb[i].lower == null || bb[i].upper == null) return null;
       const close = bars[i].close;
-      if (close <= (bb[i].lower as number)) return "long";
-      if (close >= (bb[i].upper as number)) return "short";
+      let trendOkLong = true;
+      let trendOkShort = true;
+      if (trendPeriod && trendPeriod > period) {
+        const trend = sma(bars, trendPeriod);
+        const t = trend[i];
+        if (t == null) return null;
+        trendOkLong = close >= t;
+        trendOkShort = close <= t;
+      }
+      if (trendOkLong && close <= (bb[i].lower as number)) return "long";
+      if (trendOkShort && close >= (bb[i].upper as number)) return "short";
       return null;
     }
     case "ma_bounce": {
@@ -352,14 +362,25 @@ export function makeSideLookup(
       };
     }
     case "bb_touch": {
-      const { period, mult } = params as RuleParams["bb_touch"];
+      const { period, mult, trendPeriod } =
+        params as RuleParams["bb_touch"];
       const bb = bollinger(bars, period, mult);
+      const trendSeries =
+        trendPeriod && trendPeriod > period ? sma(bars, trendPeriod) : null;
       return (i) => {
         if (i < 1) return null;
         if (bb[i].lower == null || bb[i].upper == null) return null;
         const close = bars[i].close;
-        if (close <= (bb[i].lower as number)) return "long";
-        if (close >= (bb[i].upper as number)) return "short";
+        let trendOkLong = true;
+        let trendOkShort = true;
+        if (trendSeries) {
+          const t = trendSeries[i];
+          if (t == null) return null;
+          trendOkLong = close >= t;
+          trendOkShort = close <= t;
+        }
+        if (trendOkLong && close <= (bb[i].lower as number)) return "long";
+        if (trendOkShort && close >= (bb[i].upper as number)) return "short";
         return null;
       };
     }

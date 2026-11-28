@@ -21,7 +21,11 @@ export type RuleParams = {
   ema_cross: { fast: number; slow: number };
   rsi_reversal: { period: number; oversold: number; overbought: number };
   macd_hist_flip: { fast: number; slow: number; signal: number };
-  bb_touch: { period: number; mult: number };
+  /**
+   * Touch/close beyond BB band. Optional `trendPeriod` (Rayner BB stretch /
+   * Connors-style: only long below lower band when price above slow SMA).
+   */
+  bb_touch: { period: number; mult: number; trendPeriod?: number };
   /**
    * Pullback-to-MA bounce (Rayner / クロユキ / 迷晴れ / 及川).
    * Optional `trendPeriod` filters with a slower MA (price on trend side + slope).
@@ -86,7 +90,7 @@ export type SignalRuleSet = {
  * Live defaults after YouTube full-watch pass (クロユキ deep + Rayner slice).
  * Winners: FXism MA5/12, クロユキ RSI9 20/80, 水島 BB20×2,
  * クロユキ consol_break 5/1.2, Rayner bb_squeeze_break 20×2/LB12,
- * Rayner inside_bar_break + SMA10.
+ * Rayner inside_bar_break + SMA10, Rayner bb_touch 20×2.5.
  */
 export const DEFAULT_RULE_SET: SignalRuleSet = {
   version: 1,
@@ -120,7 +124,8 @@ export const DEFAULT_RULE_SET: SignalRuleSet = {
       id: "bb_touch",
       labelJa: "ボリンジャー接触",
       enabled: true,
-      params: { period: 20, mult: 2 },
+      // Rayner BB stretch (CxFv): 2.5σ beats prior 水島 2.0 on H1 floors
+      params: { period: 20, mult: 2.5 },
     },
     {
       id: "ma_bounce",
