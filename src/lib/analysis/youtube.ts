@@ -115,6 +115,36 @@ export function youtubeCandidates(): RuleCandidate[] {
       "Rayner Teo",
       "ビルドアップ→ブレイク近似（xTd6nlbcIZc / _BBjCdVfRvU）",
     ),
+    yt(
+      "bb_touch",
+      { period: 20, mult: 2.5, trendPeriod: 200 },
+      "Rayner Teo",
+      "BB20×2.5ストレッチ＋SMA200トレンド（CxFv_EUY0ZA株式系・FX対照）",
+    ),
+    yt(
+      "bb_touch",
+      { period: 20, mult: 2.5 },
+      "Rayner Teo",
+      "BB20×2.5ストレッチ単体（対照）",
+    ),
+    yt(
+      "ma_bounce",
+      { period: 20, kind: "sma" },
+      "Rayner Teo",
+      "強トレンド=SMA20尊重の押し（PQxLrUZkZtY）",
+    ),
+    yt(
+      "swing_break",
+      { lookback: 12, trendPeriod: 20, trendKind: "sma" },
+      "Rayner Teo",
+      "強トレンド中のスイングブレイク＋SMA20近傍（PQxLr）",
+    ),
+    yt(
+      "consol_break",
+      { window: 5, maxRangeAtr: 1.0, atrPeriod: 14 },
+      "Rayner Teo",
+      "ダブルトップ/H&S等のビルドアップ抜け近似（DF9u / T5uZ）",
+    ),
   );
 
   // —— 2. オレ的ゲーム速報JIN FX ——

@@ -168,10 +168,24 @@ export function evaluateSignals(
 
   const bbRule = getRule(ruleSet, "bb_touch");
   if (bbRule?.enabled) {
-    const { period, mult } = bbRule.params;
+    const { period, mult, trendPeriod } = bbRule.params;
     const bb = bollinger(bars, period, mult);
     if (bb[i].lower != null && bb[i].upper != null) {
-      if (close <= (bb[i].lower as number)) {
+      let trendOkLong = true;
+      let trendOkShort = true;
+      if (trendPeriod && trendPeriod > period) {
+        const trend = sma(bars, trendPeriod);
+        const t = trend[i];
+        if (t == null) {
+          trendOkLong = false;
+          trendOkShort = false;
+        } else {
+          // Rayner BB stretch: long only when price above slow MA (uptrend bias)
+          trendOkLong = close >= t;
+          trendOkShort = close <= t;
+        }
+      }
+      if (trendOkLong && close <= (bb[i].lower as number)) {
         hints.push({
           id: "bb-lower",
           side: "long",
@@ -182,7 +196,7 @@ export function evaluateSignals(
           at,
         });
       }
-      if (close >= (bb[i].upper as number)) {
+      if (trendOkShort && close >= (bb[i].upper as number)) {
         hints.push({
           id: "bb-upper",
           side: "short",
