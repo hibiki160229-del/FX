@@ -67,6 +67,54 @@ export function youtubeCandidates(): RuleCandidate[] {
       "Rayner Teo",
       "RSI30/70 合流（レンジ寄り）",
     ),
+    yt(
+      "rsi_reversal",
+      { period: 10, oversold: 30, overbought: 70 },
+      "Rayner Teo",
+      "Connors系 RSI10<30 プルバック近似（W8ENI; 株式向け・FX対照）",
+    ),
+    yt(
+      "ma_bounce",
+      { period: 20, kind: "sma", trendPeriod: 200 },
+      "Rayner Teo",
+      "BB中帯=SMA20押し目＋200トレンド（KxlUFKPCxeg）",
+    ),
+    yt(
+      "ma_bounce",
+      { period: 10, kind: "sma" },
+      "Rayner Teo",
+      "SMA10尊重トレンド（インサイドバー動画のMAフィルタ）",
+    ),
+    yt(
+      "inside_bar_break",
+      { maPeriod: 10, maKind: "sma" },
+      "Rayner Teo",
+      "インサイドバー→マザー抜け＋SMA10（N23YyEm9Mf4）",
+    ),
+    yt(
+      "inside_bar_break",
+      {},
+      "Rayner Teo",
+      "インサイドバー単体ブレイク（対照）",
+    ),
+    yt(
+      "bb_squeeze_break",
+      { period: 20, mult: 2, lookback: 20 },
+      "Rayner Teo",
+      "BBスクイーズ後ブレイク（KxlUFKPCxeg）",
+    ),
+    yt(
+      "bb_squeeze_break",
+      { period: 20, mult: 2, lookback: 12 },
+      "Rayner Teo",
+      "BBスクイーズ短めLB12",
+    ),
+    yt(
+      "consol_break",
+      { window: 7, maxRangeAtr: 1.0, atrPeriod: 14 },
+      "Rayner Teo",
+      "ビルドアップ→ブレイク近似（xTd6nlbcIZc / _BBjCdVfRvU）",
+    ),
   );
 
   // —— 2. オレ的ゲーム速報JIN FX ——

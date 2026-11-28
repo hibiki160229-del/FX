@@ -11,6 +11,8 @@ const LABELS: Record<RuleId, string> = {
   ma_bounce: "MA押し目バウンス",
   swing_break: "スイングブレイク",
   consol_break: "停滞ブレイク",
+  inside_bar_break: "インサイドバーブレイク",
+  bb_squeeze_break: "BBスクイーズブレイク",
 };
 
 function cand(
@@ -127,6 +129,19 @@ export function seedCandidates(): RuleCandidate[] {
       { window: 5, maxRangeAtr: 1.2, atrPeriod: 14 },
       "seed",
       "停滞5本ブレイク",
+    ),
+    cand(
+      "inside_bar_break",
+      { maPeriod: 10, maKind: "sma" },
+      "seed",
+      "IB+SMA10",
+    ),
+    cand("inside_bar_break", {}, "seed", "IB単体"),
+    cand(
+      "bb_squeeze_break",
+      { period: 20, mult: 2, lookback: 20 },
+      "seed",
+      "BBスクイーズ20",
     ),
   );
 

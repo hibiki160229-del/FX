@@ -12,7 +12,9 @@ export type RuleId =
   | "bb_touch"
   | "ma_bounce"
   | "swing_break"
-  | "consol_break";
+  | "consol_break"
+  | "inside_bar_break"
+  | "bb_squeeze_break";
 
 export type RuleParams = {
   ma_cross: { fast: number; slow: number };
@@ -47,6 +49,23 @@ export type RuleParams = {
     maxRangeAtr: number;
     atrPeriod: number;
   };
+  /**
+   * Rayner inside-bar: bar[-1] contained in mother bar[-2], then close breaks
+   * mother high/low. Optional fast MA filter (price respecting SMA10 in trend).
+   */
+  inside_bar_break: {
+    maPeriod?: number;
+    maKind?: "sma" | "ema";
+  };
+  /**
+   * Rayner Bollinger squeeze → breakout: prior bar BB width is lookback minimum,
+   * then close breaks the squeeze-window high/low.
+   */
+  bb_squeeze_break: {
+    period: number;
+    mult: number;
+    lookback: number;
+  };
 };
 
 export type RuleDefinition<K extends RuleId = RuleId> = {
@@ -64,10 +83,10 @@ export type SignalRuleSet = {
 };
 
 /**
- * Live defaults after YouTube full-watch pass (クロユキ deep + batch1).
+ * Live defaults after YouTube full-watch pass (クロユキ deep + Rayner slice).
  * Winners: FXism MA5/12, クロユキ RSI9 20/80, 水島 BB20×2,
- * クロユキ consol_break 5/1.2. Structure swing_break stays catalog-only
- * until a floor-passing lookback lands.
+ * クロユキ consol_break 5/1.2, Rayner bb_squeeze_break 20×2/LB12,
+ * Rayner inside_bar_break + SMA10.
  */
 export const DEFAULT_RULE_SET: SignalRuleSet = {
   version: 1,
@@ -120,6 +139,18 @@ export const DEFAULT_RULE_SET: SignalRuleSet = {
       labelJa: "停滞ブレイク",
       enabled: true,
       params: { window: 5, maxRangeAtr: 1.2, atrPeriod: 14 },
+    },
+    {
+      id: "inside_bar_break",
+      labelJa: "インサイドバーブレイク",
+      enabled: true,
+      params: { maPeriod: 10, maKind: "sma" },
+    },
+    {
+      id: "bb_squeeze_break",
+      labelJa: "BBスクイーズブレイク",
+      enabled: true,
+      params: { period: 20, mult: 2, lookback: 12 },
     },
   ],
 };

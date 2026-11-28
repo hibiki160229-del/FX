@@ -194,6 +194,56 @@ export function sideAtBar(
       if (close < lo && open >= lo) return "short";
       return null;
     }
+    case "inside_bar_break": {
+      const { maPeriod, maKind } =
+        rule.params as RuleParams["inside_bar_break"];
+      if (i < 2) return null;
+      const mother = bars[i - 2];
+      const inside = bars[i - 1];
+      if (inside.high > mother.high || inside.low < mother.low) return null;
+      const close = bars[i].close;
+      let trendOkLong = true;
+      let trendOkShort = true;
+      if (maPeriod && maPeriod > 0) {
+        const series =
+          (maKind ?? "sma") === "ema"
+            ? ema(bars, maPeriod)
+            : sma(bars, maPeriod);
+        const m = series[i];
+        if (m == null) return null;
+        trendOkLong = close >= m;
+        trendOkShort = close <= m;
+      }
+      if (trendOkLong && close > mother.high) return "long";
+      if (trendOkShort && close < mother.low) return "short";
+      return null;
+    }
+    case "bb_squeeze_break": {
+      const { period, mult, lookback } =
+        rule.params as RuleParams["bb_squeeze_break"];
+      if (i < lookback + 1 || i < period) return null;
+      const bb = bollinger(bars, period, mult);
+      const widths: number[] = [];
+      for (let j = i - lookback; j < i; j++) {
+        const u = bb[j].upper;
+        const l = bb[j].lower;
+        if (u == null || l == null) return null;
+        widths.push(u - l);
+      }
+      const prevWidth = widths[widths.length - 1];
+      const minWidth = Math.min(...widths);
+      if (prevWidth > minWidth * 1.0001) return null;
+      let hi = -Infinity;
+      let lo = Infinity;
+      for (let j = i - lookback; j < i; j++) {
+        if (bars[j].high > hi) hi = bars[j].high;
+        if (bars[j].low < lo) lo = bars[j].low;
+      }
+      const close = bars[i].close;
+      if (close > hi) return "long";
+      if (close < lo) return "short";
+      return null;
+    }
     default:
       return null;
   }
@@ -363,6 +413,8 @@ export function makeSideLookup(
     }
     case "swing_break":
     case "consol_break":
+    case "inside_bar_break":
+    case "bb_squeeze_break":
       return (i) => sideAtBar(bars, i, def);
     default:
       return (i) => sideAtBar(bars, i, def);
