@@ -99,7 +99,7 @@ export type SignalRuleSet = {
 /**
  * Live defaults after YouTube full-watch pass (クロユキ deep + Rayner slices).
  * Winners: FXism MA5/12, クロユキ RSI9 20/80,
- * クロユキ consol_break 5/1.2, Rayner bb_squeeze_break 20×2/LB12,
+ * クロユキ consol_break 5/1.2, Rayner bb_squeeze_break 20×2/LB8,
  * Rayner inside_bar_break + SMA10, Rayner bb_touch 20×2.5,
  * Rayner false_break LB20.
  */
@@ -168,7 +168,9 @@ export const DEFAULT_RULE_SET: SignalRuleSet = {
       id: "bb_squeeze_break",
       labelJa: "BBスクイーズブレイク",
       enabled: true,
-      params: { period: 20, mult: 2, lookback: 12 },
+      // 迷晴れ BB lifecycle / Rayner ATR low-vol breakout: LB8 beats prior LB12
+      // on H1 floors (score ~0.65 vs ~0.63; n=66)
+      params: { period: 20, mult: 2, lookback: 8 },
     },
     {
       id: "false_break",

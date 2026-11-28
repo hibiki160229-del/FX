@@ -142,6 +142,18 @@ export function seedCandidates(): RuleCandidate[] {
     cand("inside_bar_break", {}, "seed", "IB単体"),
     cand(
       "bb_squeeze_break",
+      { period: 20, mult: 2, lookback: 8 },
+      "seed",
+      "BBスクイーズLB8",
+    ),
+    cand(
+      "bb_squeeze_break",
+      { period: 20, mult: 2, lookback: 12 },
+      "seed",
+      "BBスクイーズLB12",
+    ),
+    cand(
+      "bb_squeeze_break",
       { period: 20, mult: 2, lookback: 20 },
       "seed",
       "BBスクイーズ20",
