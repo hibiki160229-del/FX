@@ -128,6 +128,42 @@ export function youtubeCandidates(): RuleCandidate[] {
       "BB20×2.5ストレッチ単体（対照）",
     ),
     yt(
+      "false_break",
+      { lookback: 10 },
+      "Rayner Teo",
+      "フェイクブレイク反転 LB10（ScxDvXVX5yc / up0Emsq9MFg / GS3-fE94jvk）",
+    ),
+    yt(
+      "false_break",
+      { lookback: 20 },
+      "Rayner Teo",
+      "フェイクブレイク反転 LB20",
+    ),
+    yt(
+      "false_break",
+      { lookback: 10, trendPeriod: 50, trendKind: "sma" },
+      "Rayner Teo",
+      "フェイクブレイク＋SMA50トレンド（AoV合流）",
+    ),
+    yt(
+      "false_break",
+      { lookback: 10, trendPeriod: 20, trendKind: "sma" },
+      "Rayner Teo",
+      "フェイクブレイク＋SMA20強トレンド（15PaaZWXJr4）",
+    ),
+    yt(
+      "ma_bounce",
+      { period: 50, kind: "sma" },
+      "Rayner Teo",
+      "SMA50 AoV押し（ImxupRz_zQY）",
+    ),
+    yt(
+      "swing_break",
+      { lookback: 20 },
+      "Rayner Teo",
+      "強トレンド中ブレイク近似（15PaaZWXJr4 MA20ガイド対照）",
+    ),
+    yt(
       "ma_bounce",
       { period: 20, kind: "sma" },
       "Rayner Teo",

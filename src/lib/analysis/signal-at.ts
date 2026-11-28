@@ -254,6 +254,34 @@ export function sideAtBar(
       if (close < lo) return "short";
       return null;
     }
+    case "false_break": {
+      const { lookback, trendPeriod, trendKind } =
+        rule.params as RuleParams["false_break"];
+      if (i < lookback + 1) return null;
+      let priorHigh = -Infinity;
+      let priorLow = Infinity;
+      for (let j = i - lookback; j < i; j++) {
+        if (bars[j].high > priorHigh) priorHigh = bars[j].high;
+        if (bars[j].low < priorLow) priorLow = bars[j].low;
+      }
+      const bar = bars[i];
+      const close = bar.close;
+      let trendOkLong = true;
+      let trendOkShort = true;
+      if (trendPeriod && trendPeriod > 0) {
+        const kind = trendKind ?? "sma";
+        const trend =
+          kind === "ema" ? ema(bars, trendPeriod) : sma(bars, trendPeriod);
+        const t = trend[i];
+        if (t == null) return null;
+        trendOkLong = close >= t;
+        trendOkShort = close <= t;
+      }
+      if (trendOkLong && bar.low < priorLow && close > priorLow) return "long";
+      if (trendOkShort && bar.high > priorHigh && close < priorHigh)
+        return "short";
+      return null;
+    }
     default:
       return null;
   }
@@ -436,6 +464,7 @@ export function makeSideLookup(
     case "consol_break":
     case "inside_bar_break":
     case "bb_squeeze_break":
+    case "false_break":
       return (i) => sideAtBar(bars, i, def);
     default:
       return (i) => sideAtBar(bars, i, def);

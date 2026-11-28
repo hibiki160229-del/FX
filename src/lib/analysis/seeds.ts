@@ -13,6 +13,7 @@ const LABELS: Record<RuleId, string> = {
   consol_break: "停滞ブレイク",
   inside_bar_break: "インサイドバーブレイク",
   bb_squeeze_break: "BBスクイーズブレイク",
+  false_break: "フェイクブレイク反転",
 };
 
 function cand(
@@ -142,6 +143,14 @@ export function seedCandidates(): RuleCandidate[] {
       { period: 20, mult: 2, lookback: 20 },
       "seed",
       "BBスクイーズ20",
+    ),
+    cand("false_break", { lookback: 10 }, "seed", "FB LB10"),
+    cand("false_break", { lookback: 20 }, "seed", "FB LB20"),
+    cand(
+      "false_break",
+      { lookback: 10, trendPeriod: 50, trendKind: "sma" },
+      "seed",
+      "FB LB10+SMA50",
     ),
   );
 
