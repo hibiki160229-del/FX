@@ -99,8 +99,8 @@ export type SignalRuleSet = {
 /**
  * Live H1 desk defaults after high-WR + positive-return prune (pass13).
  * Keep only: WR≥50% AND totalReturn>0 (trades≥4, MDD≤25%). Prefer n≥20.
- * BT window H1=1y Yahoo. DROPPED on 1y re-BT: RSI2 (loss), swing100 (WR36%),
- * consol8 (WR40%+loss), ma_cross / inside_bar / squeeze (prior).
+ * BT window H1=1y Yahoo. Desk keeps: BB×2.5, FB12, RSI14 30/70 (web/IG).
+ * DROPPED: RSI2 (loss on 1y), swing100, consol8, ma_cross/inside/squeeze.
  */
 export const DEFAULT_RULE_SET: SignalRuleSet = {
   version: 1,
@@ -121,8 +121,9 @@ export const DEFAULT_RULE_SET: SignalRuleSet = {
     {
       id: "rsi_reversal",
       labelJa: "RSI反転",
-      enabled: false,
-      params: { period: 2, oversold: 30, overbought: 70 },
+      // Web/IG textbook RSI14 30/70: H1 1y wr67.7% ret+0.54% n=31 (RSI2 was loss)
+      enabled: true,
+      params: { period: 14, oversold: 30, overbought: 70 },
     },
     {
       id: "macd_hist_flip",
@@ -206,7 +207,7 @@ function overlayRuleSet(
 export const RULE_SETS_BY_INTERVAL: Record<string, SignalRuleSet> = {
   "1h": DEFAULT_RULE_SET,
   "60m": DEFAULT_RULE_SET,
-  // 1m: Yahoo caps ~7d. BB×1 + FB50 pass; consol6 DROPPED (WR40%).
+  // 1m: Yahoo ~7d. BB×1 + FB50 + RSI14 (inherits desk); consol6 DROPPED.
   "1m": overlayRuleSet(DEFAULT_RULE_SET, {
     bb_touch: { enabled: true, params: { period: 20, mult: 1 } },
     false_break: { enabled: true, params: { lookback: 50 } },
@@ -215,7 +216,7 @@ export const RULE_SETS_BY_INTERVAL: Record<string, SignalRuleSet> = {
       params: { window: 6, maxRangeAtr: 1.2, atrPeriod: 14 },
     },
   }),
-  // 5m: 60d Yahoo max — BB±1σ + FB50 + consol flag
+  // 5m: 60d — BB×1 + FB50 + consol + RSI14 (web/tresta)
   "5m": overlayRuleSet(DEFAULT_RULE_SET, {
     bb_touch: { enabled: true, params: { period: 20, mult: 1 } },
     false_break: { enabled: true, params: { lookback: 50 } },
