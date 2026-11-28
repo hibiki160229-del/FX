@@ -99,7 +99,7 @@ export type SignalRuleSet = {
 /**
  * Live defaults after YouTube full-watch pass (クロユキ deep + Rayner slices).
  * Winners: FXism MA5/12, クロユキ RSI9 20/80,
- * クロユキ consol_break 5/1.2, Rayner bb_squeeze_break 20×2/LB8,
+ * 迷晴れ/Rayner consol_break 8/1.5 (fight-zone), Rayner bb_squeeze_break 20×2/LB8,
  * Rayner inside_bar_break + SMA10, Rayner bb_touch 20×2.5,
  * Rayner false_break LB20.
  */
@@ -156,7 +156,9 @@ export const DEFAULT_RULE_SET: SignalRuleSet = {
       id: "consol_break",
       labelJa: "停滞ブレイク",
       enabled: true,
-      params: { window: 5, maxRangeAtr: 1.2, atrPeriod: 14 },
+      // 迷晴れ fight-zone before real breakout (sfR6) + Rayner vol contraction:
+      // window8 / ATR×1.5 beats prior 5/1.2 on H1 (score ~0.66 vs ~0.51; n=11)
+      params: { window: 8, maxRangeAtr: 1.5, atrPeriod: 14 },
     },
     {
       id: "inside_bar_break",

@@ -646,6 +646,36 @@ export function youtubeCandidates(): RuleCandidate[] {
       "停滞5本・緩めATR許容",
     ),
     yt(
+      "consol_break",
+      { window: 8, maxRangeAtr: 1.5, atrPeriod: 14 },
+      "迷晴れ",
+      "小競り合い（fight-zone）後ブレイク近似（sfR6qoGVOso）→既定",
+    ),
+    yt(
+      "consol_break",
+      { window: 8, maxRangeAtr: 1.2, atrPeriod: 14 },
+      "迷晴れ",
+      "fight-zone 8本 ATR×1.2（n=4 fragile・DROP promote）",
+    ),
+    yt(
+      "bb_touch",
+      { period: 21, mult: 3 },
+      "JIN",
+      "JFX小林 BB21×3σ利確/逆張り（eQdSM・既定2.5優位）",
+    ),
+    yt(
+      "ma_cross",
+      { fast: 5, slow: 21 },
+      "JIN",
+      "JFX 5/21角度クロス（eQdSM・DROP wr32%）",
+    ),
+    yt(
+      "bb_touch",
+      { period: 20, mult: 2 },
+      "FXism",
+      "佐藤 BB20×2σ close突破トレンドフォロー（HlhPF・対照・既定2.5 mean-rev）",
+    ),
+    yt(
       "ma_bounce",
       { period: 200, kind: "sma", trendPeriod: 200 },
       "クロユキFX",
