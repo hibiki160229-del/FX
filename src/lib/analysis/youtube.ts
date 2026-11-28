@@ -309,6 +309,18 @@ export function youtubeCandidates(): RuleCandidate[] {
     ),
     yt(
       "false_break",
+      { lookback: 12 },
+      "Rayner Teo",
+      "フェイクブレイク LB12（迷晴れ合戦跡 zSCh / Rion天井ピン QLri →既定）",
+    ),
+    yt(
+      "false_break",
+      { lookback: 20, trendPeriod: 20, trendKind: "sma" },
+      "FXism",
+      "天井ピン＋SMA20フィルタ対照（QLri・n=4 fragile）",
+    ),
+    yt(
+      "false_break",
       { lookback: 10, trendPeriod: 50, trendKind: "sma" },
       "Rayner Teo",
       "フェイクブレイク＋SMA50トレンド（AoV合流）",
