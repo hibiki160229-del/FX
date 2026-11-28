@@ -158,6 +158,24 @@ export function youtubeCandidates(): RuleCandidate[] {
       "SMA75尊重（及川式・9k-zrrpumdw）",
     ),
     yt(
+      "ma_bounce",
+      { period: 25, kind: "sma" },
+      "迷晴れ",
+      "SMA25機能足アタッチ（w_lznnP0k24）",
+    ),
+    yt(
+      "ma_bounce",
+      { period: 25, kind: "sma", trendPeriod: 75 },
+      "迷晴れ",
+      "SMA25押し＋SMA75パーフェクトオーダー近似",
+    ),
+    yt(
+      "ma_cross",
+      { fast: 25, slow: 75 },
+      "迷晴れ",
+      "SMA25/75クロス（参考・遅延）",
+    ),
+    yt(
       "inside_bar_break",
       { maPeriod: 10, maKind: "sma" },
       "Rayner Teo",
