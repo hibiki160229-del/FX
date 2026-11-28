@@ -147,8 +147,10 @@ export const DEFAULT_RULE_SET: SignalRuleSet = {
     {
       id: "swing_break",
       labelJa: "スイングブレイク",
-      enabled: false,
-      params: { lookback: 20, trendPeriod: 200, trendKind: "sma" },
+      // Rayner Donchian/futures trend (ggnIGZiDoFY): LB100 close break
+      // beats prior disabled LB20+200SMA on H1 floors (score ~0.69)
+      enabled: true,
+      params: { lookback: 100 },
     },
     {
       id: "consol_break",
