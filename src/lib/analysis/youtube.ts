@@ -200,6 +200,24 @@ export function youtubeCandidates(): RuleCandidate[] {
       "BBスクイーズ短めLB12",
     ),
     yt(
+      "bb_squeeze_break",
+      { period: 20, mult: 2, lookback: 8 },
+      "Rayner Teo",
+      "BBスクイーズLB8（G_9gZS02xmA 迷晴れライフサイクル／4gUM ATR低ボラ対照）",
+    ),
+    yt(
+      "bb_squeeze_break",
+      { period: 20, mult: 2, lookback: 15 },
+      "Rayner Teo",
+      "BBスクイーズLB15対照",
+    ),
+    yt(
+      "bb_touch",
+      { period: 20, mult: 3 },
+      "迷晴れ",
+      "BB20×3σタッチ（G_9gZS02xmA・既定2.5優位）",
+    ),
+    yt(
       "consol_break",
       { window: 7, maxRangeAtr: 1.0, atrPeriod: 14 },
       "Rayner Teo",
