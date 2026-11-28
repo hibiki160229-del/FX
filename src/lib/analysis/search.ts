@@ -117,5 +117,29 @@ export function searchCandidates(): RuleCandidate[] {
     }
   }
 
+  out.push(
+    cand("inside_bar_break", {}, "探索 IB単体"),
+    cand(
+      "inside_bar_break",
+      { maPeriod: 10, maKind: "sma" },
+      "探索 IB+SMA10",
+    ),
+    cand(
+      "inside_bar_break",
+      { maPeriod: 20, maKind: "sma" },
+      "探索 IB+SMA20",
+    ),
+  );
+
+  for (const lookback of [12, 20, 34]) {
+    out.push(
+      cand(
+        "bb_squeeze_break",
+        { period: 20, mult: 2, lookback },
+        `探索 BBスクイーズLB${lookback}`,
+      ),
+    );
+  }
+
   return dedupe(out);
 }

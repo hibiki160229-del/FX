@@ -354,6 +354,108 @@ export function evaluateSignals(
     }
   }
 
+  const ibRule = getRule(ruleSet, "inside_bar_break");
+  if (ibRule?.enabled && i >= 2) {
+    const mother = bars[i - 2];
+    const inside = bars[i - 1];
+    const isInside =
+      inside.high <= mother.high && inside.low >= mother.low;
+    if (isInside) {
+      const { maPeriod, maKind } = ibRule.params;
+      let trendOkLong = true;
+      let trendOkShort = true;
+      if (maPeriod && maPeriod > 0) {
+        const series =
+          (maKind ?? "sma") === "ema"
+            ? ema(bars, maPeriod)
+            : sma(bars, maPeriod);
+        const m = series[i];
+        if (m == null) {
+          trendOkLong = false;
+          trendOkShort = false;
+        } else {
+          // Rayner: trade IB when price respects fast MA (momentum trend)
+          trendOkLong = close >= m;
+          trendOkShort = close <= m;
+        }
+      }
+      if (trendOkLong && close > mother.high) {
+        hints.push({
+          id: "inside-bar-long",
+          side: "long",
+          title: "インサイドバー上抜け",
+          reason:
+            "インサイドバー形成後にマザー高値を終値ブレイク。モメンタム継続の順張りヒントです。",
+          strength: 0.74,
+          at,
+        });
+      }
+      if (trendOkShort && close < mother.low) {
+        hints.push({
+          id: "inside-bar-short",
+          side: "short",
+          title: "インサイドバー下抜け",
+          reason:
+            "インサイドバー形成後にマザー安値を終値ブレイク。モメンタム継続の順張りヒントです。",
+          strength: 0.74,
+          at,
+        });
+      }
+    }
+  }
+
+  const sqRule = getRule(ruleSet, "bb_squeeze_break");
+  if (sqRule?.enabled) {
+    const { period, mult, lookback } = sqRule.params;
+    if (i >= lookback + 1 && i >= period) {
+      const bb = bollinger(bars, period, mult);
+      const widths: number[] = [];
+      let valid = true;
+      for (let j = i - lookback; j < i; j++) {
+        const u = bb[j].upper;
+        const l = bb[j].lower;
+        if (u == null || l == null) {
+          valid = false;
+          break;
+        }
+        widths.push(u - l);
+      }
+      if (valid && widths.length === lookback) {
+        const prevWidth = widths[widths.length - 1];
+        const minWidth = Math.min(...widths);
+        // Squeeze: prior bar width is the lookback minimum (Rayner BB sausage)
+        if (prevWidth <= minWidth * 1.0001) {
+          let hi = -Infinity;
+          let lo = Infinity;
+          for (let j = i - lookback; j < i; j++) {
+            if (bars[j].high > hi) hi = bars[j].high;
+            if (bars[j].low < lo) lo = bars[j].low;
+          }
+          if (close > hi) {
+            hints.push({
+              id: "bb-squeeze-long",
+              side: "long",
+              title: "BBスクイーズ上抜け",
+              reason: `ボリンジャー幅が直近${lookback}本で最小後にレンジ上抜け。ボラ拡張ブレイクのヒントです。`,
+              strength: 0.73,
+              at,
+            });
+          }
+          if (close < lo) {
+            hints.push({
+              id: "bb-squeeze-short",
+              side: "short",
+              title: "BBスクイーズ下抜け",
+              reason: `ボリンジャー幅が直近${lookback}本で最小後にレンジ下抜け。ボラ拡張ブレイクのヒントです。`,
+              strength: 0.73,
+              at,
+            });
+          }
+        }
+      }
+    }
+  }
+
   return hints.sort((a, b) => b.strength - a.strength);
 }
 
