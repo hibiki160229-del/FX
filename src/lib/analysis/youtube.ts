@@ -373,6 +373,30 @@ export function youtubeCandidates(): RuleCandidate[] {
       "FXism 及川圭哉",
       "RSI14 25/80（ahxEp95OjPo・ワイルダー70失敗回避）",
     ),
+    yt(
+      "ma_bounce",
+      { period: 5, kind: "sma" },
+      "Rayner Teo",
+      "MAブレイク＝終値でSMA5超え（5PPwegRoBmY 押し目エントリトリガ）",
+    ),
+    yt(
+      "ma_bounce",
+      { period: 5, kind: "sma", trendPeriod: 50 },
+      "Rayner Teo",
+      "SMA5ブレイク＋SMA50トレンド（5PPweg / npNgx AoV）",
+    ),
+    yt(
+      "ma_bounce",
+      { period: 5, kind: "sma", trendPeriod: 200 },
+      "Rayner Teo",
+      "SMA5ブレイク＋SMA200フィルタ",
+    ),
+    yt(
+      "swing_break",
+      { lookback: 20 },
+      "Rayner Teo",
+      "Donchian20上下バンド終値ブレイク（rAVEsHLnr9o）",
+    ),
   );
 
   // —— 2. オレ的ゲーム速報JIN FX ——
