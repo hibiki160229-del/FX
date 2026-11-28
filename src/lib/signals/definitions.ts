@@ -97,9 +97,10 @@ export type SignalRuleSet = {
 };
 
 /**
- * Live H1 desk defaults after YouTube TF-policy retest (pass11).
- * High-WR keep rule: floors + wr≥50% + n≥20 on the method's TF.
- * H1: RSI2 30/70 replaces fragile RSI9 20/80 (n=8); other H1 winners unchanged.
+ * Live H1 desk defaults after high-WR + positive-return prune (pass13).
+ * Keep only: WR≥50% AND totalReturn>0 (trades≥4, MDD≤25%). Prefer n≥20.
+ * BT window H1=1y Yahoo. DROPPED on 1y re-BT: RSI2 (loss), swing100 (WR36%),
+ * consol8 (WR40%+loss), ma_cross / inside_bar / squeeze (prior).
  */
 export const DEFAULT_RULE_SET: SignalRuleSet = {
   version: 1,
@@ -108,7 +109,7 @@ export const DEFAULT_RULE_SET: SignalRuleSet = {
     {
       id: "ma_cross",
       labelJa: "MAクロス",
-      enabled: true,
+      enabled: false,
       params: { fast: 5, slow: 12 },
     },
     {
@@ -120,8 +121,7 @@ export const DEFAULT_RULE_SET: SignalRuleSet = {
     {
       id: "rsi_reversal",
       labelJa: "RSI反転",
-      enabled: true,
-      // TF-policy pass11: RSI2 30/70 (wr~62% n=89) beats fragile RSI9 20/80 (n=8)
+      enabled: false,
       params: { period: 2, oversold: 30, overbought: 70 },
     },
     {
@@ -134,7 +134,6 @@ export const DEFAULT_RULE_SET: SignalRuleSet = {
       id: "bb_touch",
       labelJa: "ボリンジャー接触",
       enabled: true,
-      // Rayner BB stretch: 2.5σ best high-WR on H1 (wr~72% n=47)
       params: { period: 20, mult: 2.5 },
     },
     {
@@ -146,36 +145,31 @@ export const DEFAULT_RULE_SET: SignalRuleSet = {
     {
       id: "swing_break",
       labelJa: "スイングブレイク",
-      // Rayner Donchian LB100 (H1); other TFs often fail wr floor
-      enabled: true,
+      enabled: false,
       params: { lookback: 100 },
     },
     {
       id: "consol_break",
       labelJa: "停滞ブレイク",
-      enabled: true,
-      // 迷晴れ fight-zone: window8 / ATR×1.5 on H1
+      enabled: false,
       params: { window: 8, maxRangeAtr: 1.5, atrPeriod: 14 },
     },
     {
       id: "inside_bar_break",
       labelJa: "インサイドバーブレイク",
-      enabled: true,
-      // 水島/迷晴れ: SMA21 on H1
+      enabled: false,
       params: { maPeriod: 21, maKind: "sma" },
     },
     {
       id: "bb_squeeze_break",
       labelJa: "BBスクイーズブレイク",
-      enabled: true,
-      // LB8 keeps best composite on H1 (LB12 hits wr=50% but lower score)
+      enabled: false,
       params: { period: 20, mult: 2, lookback: 8 },
     },
     {
       id: "false_break",
       labelJa: "フェイクブレイク反転",
       enabled: true,
-      // LB12 best high-WR on H1 (wr~66% n=133)
       params: { lookback: 12 },
     },
   ],
@@ -206,14 +200,22 @@ function overlayRuleSet(
 }
 
 /**
- * Per-interval packs from TF-policy retest (high-WR keeps).
- * Use `getRuleSetForInterval` when analyzing / enabling signals on a TF.
+ * Per-interval packs — only high-WR + positive-return keeps enabled.
+ * Yahoo max windows used in BT: 1m≈7–8d, 5m/15m/30m=60d, 1h/4h≈1y, 1d=1y.
  */
 export const RULE_SETS_BY_INTERVAL: Record<string, SignalRuleSet> = {
-  // Desk/analysis H1
   "1h": DEFAULT_RULE_SET,
   "60m": DEFAULT_RULE_SET,
-  // 5m: 水島 flag consol + BB±1σ + longer FB lookback
+  // 1m: Yahoo caps ~7d. BB×1 + FB50 pass; consol6 DROPPED (WR40%).
+  "1m": overlayRuleSet(DEFAULT_RULE_SET, {
+    bb_touch: { enabled: true, params: { period: 20, mult: 1 } },
+    false_break: { enabled: true, params: { lookback: 50 } },
+    consol_break: {
+      enabled: false,
+      params: { window: 6, maxRangeAtr: 1.2, atrPeriod: 14 },
+    },
+  }),
+  // 5m: 60d Yahoo max — BB±1σ + FB50 + consol flag
   "5m": overlayRuleSet(DEFAULT_RULE_SET, {
     bb_touch: { enabled: true, params: { period: 20, mult: 1 } },
     false_break: { enabled: true, params: { lookback: 50 } },
@@ -221,14 +223,8 @@ export const RULE_SETS_BY_INTERVAL: Record<string, SignalRuleSet> = {
       enabled: true,
       params: { window: 6, maxRangeAtr: 1.2, atrPeriod: 14 },
     },
-    // H1-tuned rules often fail wr on 5m
-    swing_break: { enabled: false },
-    inside_bar_break: { enabled: false },
-    rsi_reversal: { enabled: false },
-    ma_cross: { enabled: false },
-    bb_squeeze_break: { enabled: false },
   }),
-  // 15m: Oikawa M15 context — BB×1 + FB LB50
+  // 15m: 60d — BB×1 + FB LB50
   "15m": overlayRuleSet(DEFAULT_RULE_SET, {
     bb_touch: { enabled: true, params: { period: 20, mult: 1 } },
     false_break: { enabled: true, params: { lookback: 50 } },
@@ -239,7 +235,7 @@ export const RULE_SETS_BY_INTERVAL: Record<string, SignalRuleSet> = {
     consol_break: { enabled: false },
     bb_squeeze_break: { enabled: false },
   }),
-  // 30m: BB×1 + FB LB30
+  // 30m: 60d — BB×1 + FB LB30
   "30m": overlayRuleSet(DEFAULT_RULE_SET, {
     bb_touch: { enabled: true, params: { period: 20, mult: 1 } },
     false_break: { enabled: true, params: { lookback: 30 } },
@@ -250,7 +246,7 @@ export const RULE_SETS_BY_INTERVAL: Record<string, SignalRuleSet> = {
     consol_break: { enabled: false },
     bb_squeeze_break: { enabled: false },
   }),
-  // 4h: 迷晴れ/水島 H4 — BB×1.5 + FB LB16
+  // 4h: 1y H1 agg — BB×1.5 + FB LB16
   "4h": overlayRuleSet(DEFAULT_RULE_SET, {
     bb_touch: { enabled: true, params: { period: 20, mult: 1.5 } },
     false_break: { enabled: true, params: { lookback: 16 } },
@@ -261,10 +257,10 @@ export const RULE_SETS_BY_INTERVAL: Record<string, SignalRuleSet> = {
     consol_break: { enabled: false },
     bb_squeeze_break: { enabled: false },
   }),
-  // 1d: BB×1 + FB LB14
+  // 1d: 1y — BB×1 only (FB14 was loss under return floor)
   "1d": overlayRuleSet(DEFAULT_RULE_SET, {
     bb_touch: { enabled: true, params: { period: 20, mult: 1 } },
-    false_break: { enabled: true, params: { lookback: 14 } },
+    false_break: { enabled: false, params: { lookback: 14 } },
     swing_break: { enabled: false },
     inside_bar_break: { enabled: false },
     rsi_reversal: { enabled: false },

@@ -16,13 +16,29 @@ export type ScoreFloors = {
   minTrades: number;
   maxDrawdown: number;
   minWinRate: number;
+  /**
+   * Minimum totalReturn (fraction). Default 0 → require strictly positive
+   * profit (`totalReturn > 0`). Loss / flat equity fails the floor.
+   */
+  minReturn: number;
 };
 
+/**
+ * Hard keep floors (user prefs 2026-11-28):
+ * - trades ≥ 4, MDD ≤ 25%
+ * - high WR ≥ 50%
+ * - totalReturn > 0 (minReturn: 0 exclusive)
+ * Prefer n ≥ 20 when the sample allows (promotion policy; not a hard floor).
+ */
 export const DEFAULT_SCORE_FLOORS: ScoreFloors = {
   minTrades: 4,
   maxDrawdown: 0.25,
-  minWinRate: 0.35,
+  minWinRate: 0.5,
+  minReturn: 0,
 };
+
+/** Soft preference for promote / pack enable when sample is large enough. */
+export const PREFERRED_MIN_TRADES = 20;
 
 export type RuleCandidate = {
   id: string;
