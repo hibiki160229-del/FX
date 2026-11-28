@@ -97,6 +97,46 @@ export function sideAtBar(
       if (close >= (bb[i].upper as number)) return "short";
       return null;
     }
+    case "ma_bounce": {
+      const { period, kind, trendPeriod } =
+        rule.params as RuleParams["ma_bounce"];
+      const series = kind === "ema" ? ema(bars, period) : sma(bars, period);
+      const ma = series[i];
+      const maPrev = series[prev];
+      if (ma == null || maPrev == null) return null;
+      const close = bars[i].close;
+      const low = bars[i].low;
+      const high = bars[i].high;
+      const prevClose = bars[prev].close;
+      let trendOkLong = true;
+      let trendOkShort = true;
+      if (trendPeriod && trendPeriod > period) {
+        const trend =
+          kind === "ema" ? ema(bars, trendPeriod) : sma(bars, trendPeriod);
+        const t = trend[i];
+        const tPrev = trend[Math.max(0, i - 5)];
+        if (t == null || tPrev == null) return null;
+        trendOkLong = close >= t && t > tPrev;
+        trendOkShort = close <= t && t < tPrev;
+      }
+      if (
+        trendOkLong &&
+        low <= ma &&
+        close > ma &&
+        prevClose <= maPrev * 1.001
+      ) {
+        return "long";
+      }
+      if (
+        trendOkShort &&
+        high >= ma &&
+        close < ma &&
+        prevClose >= maPrev * 0.999
+      ) {
+        return "short";
+      }
+      return null;
+    }
     default:
       return null;
   }
@@ -213,6 +253,54 @@ export function makeSideLookup(
         const close = bars[i].close;
         if (close <= (bb[i].lower as number)) return "long";
         if (close >= (bb[i].upper as number)) return "short";
+        return null;
+      };
+    }
+    case "ma_bounce": {
+      const { period, kind, trendPeriod } =
+        params as RuleParams["ma_bounce"];
+      const series = kind === "ema" ? ema(bars, period) : sma(bars, period);
+      const trendSeries =
+        trendPeriod && trendPeriod > period
+          ? kind === "ema"
+            ? ema(bars, trendPeriod)
+            : sma(bars, trendPeriod)
+          : null;
+      return (i) => {
+        if (i < 1) return null;
+        const prev = i - 1;
+        const ma = series[i];
+        const maPrev = series[prev];
+        if (ma == null || maPrev == null) return null;
+        const close = bars[i].close;
+        const low = bars[i].low;
+        const high = bars[i].high;
+        const prevClose = bars[prev].close;
+        let trendOkLong = true;
+        let trendOkShort = true;
+        if (trendSeries) {
+          const t = trendSeries[i];
+          const tPrev = trendSeries[Math.max(0, i - 5)];
+          if (t == null || tPrev == null) return null;
+          trendOkLong = close >= t && t > tPrev;
+          trendOkShort = close <= t && t < tPrev;
+        }
+        if (
+          trendOkLong &&
+          low <= ma &&
+          close > ma &&
+          prevClose <= maPrev * 1.001
+        ) {
+          return "long";
+        }
+        if (
+          trendOkShort &&
+          high >= ma &&
+          close < ma &&
+          prevClose >= maPrev * 0.999
+        ) {
+          return "short";
+        }
         return null;
       };
     }

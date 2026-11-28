@@ -29,8 +29,10 @@ export type RuleCandidate = {
   ruleId: RuleId;
   labelJa: string;
   params: RuleParams[RuleId];
-  source: "seed" | "web" | "search";
+  source: "seed" | "web" | "search" | "youtube";
   note?: string;
+  /** YouTube channel or article provenance (JA). */
+  channel?: string;
 };
 
 export type RankedCandidate = RuleCandidate & {
@@ -51,7 +53,8 @@ export type AnalysisRunResult = {
   extraction: {
     attempted: boolean;
     webHits: number;
-    youtube: "skipped";
+    youtube: "skipped" | "seeded";
+    youtubeCandidates: number;
     noteJa: string;
   };
   /** Best-of-each-rule-id pack ready to promote. */

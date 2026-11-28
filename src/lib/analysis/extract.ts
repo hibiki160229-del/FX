@@ -172,8 +172,8 @@ export async function extractWebCandidates(
   const candidates = dedupe(collected);
   const noteJa =
     hits > 0
-      ? `Web記事から ${candidates.length} 件の候補パラメータを抽出（${hits} ソース）。YouTube文字起こしは今回スキップ。`
-      : "Web抽出は到達不可または該当なし。シード＋パラメータ探索で継続。YouTubeは今回スキップ。";
+      ? `Web記事から ${candidates.length} 件の候補パラメータを抽出（${hits} ソース）。YouTubeは別途チャンネル学習シードを投入。`
+      : "Web抽出は到達不可または該当なし。シード＋探索＋YouTube学習シードで継続。";
 
   return { candidates, webHits: hits, attempted, noteJa };
 }

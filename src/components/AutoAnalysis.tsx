@@ -40,6 +40,8 @@ function sourceLabel(s: RankedCandidate["source"]) {
       return "Web";
     case "search":
       return "探索";
+    case "youtube":
+      return "YouTube";
     default:
       return "シード";
   }

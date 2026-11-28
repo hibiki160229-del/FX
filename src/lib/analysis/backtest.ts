@@ -24,7 +24,12 @@ export function backtestRule(
 ): ScoreMetrics {
   const initialEquity = opts.initialEquity ?? 1_000_000;
   const riskFraction = opts.riskFraction ?? 0.1;
-  const warmup = opts.warmup ?? 60;
+  // Long MAs (e.g. 200) need deeper warm-up before signals are meaningful.
+  const paramValues = Object.values(params as Record<string, unknown>).filter(
+    (v): v is number => typeof v === "number" && Number.isFinite(v),
+  );
+  const inferred = Math.max(60, ...paramValues, 0) + 10;
+  const warmup = opts.warmup ?? inferred;
 
   if (bars.length < warmup + 10) {
     return {

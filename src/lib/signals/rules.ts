@@ -196,6 +196,67 @@ export function evaluateSignals(
     }
   }
 
+  const bounceRule = getRule(ruleSet, "ma_bounce");
+  if (bounceRule?.enabled) {
+    const { period, kind, trendPeriod } = bounceRule.params;
+    const series = kind === "ema" ? ema(bars, period) : sma(bars, period);
+    const ma = series[i];
+    const maPrev = series[prev];
+    if (ma != null && maPrev != null) {
+      const low = bars[i].low;
+      const high = bars[i].high;
+      const prevClose = bars[prev].close;
+      let trendOkLong = true;
+      let trendOkShort = true;
+      if (trendPeriod && trendPeriod > period) {
+        const trend =
+          kind === "ema" ? ema(bars, trendPeriod) : sma(bars, trendPeriod);
+        const t = trend[i];
+        const tPrev = trend[Math.max(0, i - 5)];
+        if (t == null || tPrev == null) {
+          trendOkLong = false;
+          trendOkShort = false;
+        } else {
+          const slopingUp = t > tPrev;
+          const slopingDown = t < tPrev;
+          trendOkLong = close >= t && slopingUp;
+          trendOkShort = close <= t && slopingDown;
+        }
+      }
+      // Bounce: wick into MA then close back on trend side
+      if (
+        trendOkLong &&
+        low <= (ma as number) &&
+        close > (ma as number) &&
+        prevClose <= (maPrev as number) * 1.001
+      ) {
+        hints.push({
+          id: "ma-bounce-long",
+          side: "long",
+          title: "MA押し目バウンス",
+          reason: `${kind.toUpperCase()}${period} への押し目から終値が上抜け。トレンド方向の押し目買いヒントです。`,
+          strength: 0.78,
+          at,
+        });
+      }
+      if (
+        trendOkShort &&
+        high >= (ma as number) &&
+        close < (ma as number) &&
+        prevClose >= (maPrev as number) * 0.999
+      ) {
+        hints.push({
+          id: "ma-bounce-short",
+          side: "short",
+          title: "MA戻りバウンス",
+          reason: `${kind.toUpperCase()}${period} への戻りから終値が下抜け。トレンド方向の戻り売りヒントです。`,
+          strength: 0.78,
+          at,
+        });
+      }
+    }
+  }
+
   return hints.sort((a, b) => b.strength - a.strength);
 }
 
