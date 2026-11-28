@@ -125,6 +125,8 @@ export function seedCandidates(): RuleCandidate[] {
       "スイング20＋200SMA",
     ),
     cand("swing_break", { lookback: 20 }, "seed", "スイング20"),
+    cand("swing_break", { lookback: 100 }, "seed", "Donchian100"),
+    cand("swing_break", { lookback: 55 }, "seed", "Donchian55"),
     cand(
       "consol_break",
       { window: 5, maxRangeAtr: 1.2, atrPeriod: 14 },
