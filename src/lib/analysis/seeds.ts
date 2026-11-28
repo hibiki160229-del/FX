@@ -141,6 +141,12 @@ export function seedCandidates(): RuleCandidate[] {
     ),
     cand(
       "inside_bar_break",
+      { maPeriod: 21, maKind: "sma" },
+      "seed",
+      "IB+SMA21",
+    ),
+    cand(
+      "inside_bar_break",
       { maPeriod: 10, maKind: "sma" },
       "seed",
       "IB+SMA10",

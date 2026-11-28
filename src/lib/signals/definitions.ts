@@ -164,7 +164,9 @@ export const DEFAULT_RULE_SET: SignalRuleSet = {
       id: "inside_bar_break",
       labelJa: "インサイドバーブレイク",
       enabled: true,
-      params: { maPeriod: 10, maKind: "sma" },
+      // 水島 TL+SMA21 pullback confluence / 迷晴れ H4 SMA21:
+      // SMA21 beats prior SMA10 on H1 (score ~0.57 vs ~0.52; n=49)
+      params: { maPeriod: 21, maKind: "sma" },
     },
     {
       id: "bb_squeeze_break",

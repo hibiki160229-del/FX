@@ -183,6 +183,12 @@ export function youtubeCandidates(): RuleCandidate[] {
     ),
     yt(
       "inside_bar_break",
+      { maPeriod: 21, maKind: "sma" },
+      "水島翔",
+      "インサイドバー＋SMA21（TL合流・既定）",
+    ),
+    yt(
+      "inside_bar_break",
       {},
       "Rayner Teo",
       "インサイドバー単体ブレイク（対照）",
