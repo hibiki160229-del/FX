@@ -397,6 +397,24 @@ export function youtubeCandidates(): RuleCandidate[] {
       "Rayner Teo",
       "Donchian20上下バンド終値ブレイク（rAVEsHLnr9o）",
     ),
+    yt(
+      "ma_bounce",
+      { period: 100, kind: "sma" },
+      "Rayner Teo",
+      "弱トレンド深い押し＝SMA100 AoV（x95peuh08P4）",
+    ),
+    yt(
+      "ma_bounce",
+      { period: 100, kind: "ema" },
+      "Rayner Teo",
+      "弱トレンド深い押し＝EMA100 AoV",
+    ),
+    yt(
+      "ma_bounce",
+      { period: 20, kind: "ema", trendPeriod: 50 },
+      "Rayner Teo",
+      "強トレンド20EMA押し＋50EMA方向（KGSdkf / hvjOEWm）",
+    ),
   );
 
   // —— 2. オレ的ゲーム速報JIN FX ——
