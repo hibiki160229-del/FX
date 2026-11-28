@@ -2,11 +2,14 @@
  * Offline multi-TF backtest for YouTube / desk rule candidates on USD/JPY.
  * Floors: trades≥4, MDD≤25%, WR≥50%, totalReturn>0 (prefer n≥20).
  *
- * Yahoo max windows (as of 2026-11-28):
- *   1m → 7d–8d (use 7d; 60d rejected)
- *   5m/15m/30m → 60d (3mo rejected)
- *   1h / 4h(agg) → 1y (~6264 H1 bars)
- *   1d → 1y
+ * Data source:
+ *   - TWELVE_DATA_API_KEY set → Twelve Data (prefer ~1y; 1m via paging,
+ *     outputsize≤5000 + start_date/end_date). Free Basic: 8/min, 800/day.
+ *   - else Yahoo max windows:
+ *       1m → 7d–8d (use 7d; 60d rejected)
+ *       5m/15m/30m → 60d (3mo rejected)
+ *       1h / 4h(agg) → 1y
+ *       1d → 1y
  *
  * Run from repo root: npx --yes tsx scripts/backtest-youtube.ts
  */
@@ -26,6 +29,13 @@ import {
   type RuleId,
   type RuleParams,
 } from "../src/lib/signals/definitions";
+import {
+  fetchTwelveDataOhlcv,
+  isTwelveDataConfigured,
+  TWELVE_DATA_FREE_CREDITS_PER_DAY,
+  TWELVE_DATA_FREE_CREDITS_PER_MIN,
+  TWELVE_DATA_MAX_OUTPUTSIZE,
+} from "../src/lib/providers/twelve-data";
 
 type TfSpec = {
   key: string;
@@ -35,22 +45,126 @@ type TfSpec = {
   agg4h?: boolean;
 };
 
-/** Longest Yahoo windows that succeed for USDJPY=X. */
-export const BT_TF_SPECS: TfSpec[] = [
-  { key: "1m", range: "7d", interval: "1m", note: "Yahoo 1m max ~7d (8d ok; 60d rejected)" },
-  { key: "5m", range: "60d", interval: "5m", note: "Yahoo 5m max 60d" },
-  { key: "15m", range: "60d", interval: "15m", note: "Yahoo 15m max 60d" },
-  { key: "30m", range: "60d", interval: "30m", note: "Yahoo 30m max 60d" },
-  { key: "1h", range: "1y", interval: "1h", note: "Yahoo 1h ~1y" },
-  {
-    key: "4h",
-    range: "1y",
-    interval: "1h",
-    agg4h: true,
-    note: "4h = aggregate 1h×4 over 1y",
-  },
-  { key: "1d", range: "1y", interval: "1d", note: "Yahoo 1d ~1y" },
-];
+function yahooTfSpecs(): TfSpec[] {
+  return [
+    {
+      key: "1m",
+      range: "7d",
+      interval: "1m",
+      note: "Yahoo 1m max ~7d (8d ok; 60d rejected)",
+    },
+    { key: "5m", range: "60d", interval: "5m", note: "Yahoo 5m max 60d" },
+    {
+      key: "15m",
+      range: "60d",
+      interval: "15m",
+      note: "Yahoo 15m max 60d",
+    },
+    {
+      key: "30m",
+      range: "60d",
+      interval: "30m",
+      note: "Yahoo 30m max 60d",
+    },
+    { key: "1h", range: "1y", interval: "1h", note: "Yahoo 1h ~1y" },
+    {
+      key: "4h",
+      range: "1y",
+      interval: "1h",
+      agg4h: true,
+      note: "4h = aggregate 1h×4 over 1y",
+    },
+    { key: "1d", range: "1y", interval: "1d", note: "Yahoo 1d ~1y" },
+  ];
+}
+
+function twelveTfSpecs(): TfSpec[] {
+  return [
+    {
+      key: "1m",
+      range: "1y",
+      interval: "1m",
+      note: `Twelve Data 1m ~1y (paging ≤${TWELVE_DATA_MAX_OUTPUTSIZE}; free ${TWELVE_DATA_FREE_CREDITS_PER_MIN}/min ${TWELVE_DATA_FREE_CREDITS_PER_DAY}/day)`,
+    },
+    {
+      key: "5m",
+      range: "1y",
+      interval: "5m",
+      note: "Twelve Data 5m ~1y",
+    },
+    {
+      key: "15m",
+      range: "1y",
+      interval: "15m",
+      note: "Twelve Data 15m ~1y",
+    },
+    {
+      key: "30m",
+      range: "1y",
+      interval: "30m",
+      note: "Twelve Data 30m ~1y",
+    },
+    {
+      key: "1h",
+      range: "1y",
+      interval: "1h",
+      note: "Twelve Data 1h ~1y",
+    },
+    {
+      key: "4h",
+      range: "1y",
+      interval: "1h",
+      agg4h: true,
+      note: "4h = aggregate 1h×4 over 1y (Twelve Data)",
+    },
+    {
+      key: "1d",
+      range: "1y",
+      interval: "1d",
+      note: "Twelve Data 1d ~1y",
+    },
+  ];
+}
+
+/** Probe Twelve Data with a tiny window; invalid keys fall back to Yahoo specs. */
+async function resolveTfSpecs(): Promise<{
+  useTwelve: boolean;
+  specs: TfSpec[];
+  probeNote: string;
+}> {
+  if (!isTwelveDataConfigured()) {
+    return {
+      useTwelve: false,
+      specs: yahooTfSpecs(),
+      probeNote: "TWELVE_DATA_API_KEY unset — Yahoo windows",
+    };
+  }
+  try {
+    const probe = await fetchTwelveDataOhlcv("1d", "1h");
+    if (probe && probe.bars.length >= 40) {
+      return {
+        useTwelve: true,
+        specs: twelveTfSpecs(),
+        probeNote: `Twelve Data OK (${probe.bars.length} bars on 1d/1h probe)`,
+      };
+    }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return {
+      useTwelve: false,
+      specs: yahooTfSpecs(),
+      probeNote: `Twelve Data probe failed (${msg}) — Yahoo windows`,
+    };
+  }
+  return {
+    useTwelve: false,
+    specs: yahooTfSpecs(),
+    probeNote: "Twelve Data probe empty — Yahoo windows",
+  };
+}
+
+/** Exported after resolve for scripts that import specs statically (Yahoo default). */
+export const BT_TF_SPECS: TfSpec[] = yahooTfSpecs();
 
 function agg4h(bars: OhlcvBar[]): OhlcvBar[] {
   const out: OhlcvBar[] = [];
@@ -109,10 +223,20 @@ function packCandidates(): Cand[] {
 async function main() {
   const floors = DEFAULT_SCORE_FLOORS;
   const barsByTf: Record<string, OhlcvBar[]> = {};
-  const datasets: Record<string, { bars: number; label: string; note: string }> =
-    {};
+  const datasets: Record<
+    string,
+    { bars: number; label: string; note: string; source?: string }
+  > = {};
 
-  for (const tf of BT_TF_SPECS) {
+  const { useTwelve, specs, probeNote } = await resolveTfSpecs();
+  console.error(probeNote);
+  console.error(
+    useTwelve
+      ? `provider=twelve_data (free ${TWELVE_DATA_FREE_CREDITS_PER_MIN}/min ${TWELVE_DATA_FREE_CREDITS_PER_DAY}/day)`
+      : "provider=yahoo (zero-secret fallback)",
+  );
+
+  for (const tf of specs) {
     const ohlcv = await fetchUsdJpyOhlcv(tf.range, tf.interval);
     const bars = tf.agg4h ? agg4h(ohlcv.bars) : ohlcv.bars;
     barsByTf[tf.key] = bars;
@@ -120,8 +244,11 @@ async function main() {
       bars: bars.length,
       label: `${tf.interval}_${tf.range}${tf.agg4h ? "_agg4h" : ""}`,
       note: tf.note,
+      source: ohlcv.source,
     };
-    console.error(`loaded ${tf.key}: ${bars.length} (${tf.note})`);
+    console.error(
+      `loaded ${tf.key}: ${bars.length} src=${ohlcv.source} (${tf.note})`,
+    );
   }
 
   const cands = packCandidates();
@@ -197,6 +324,14 @@ async function main() {
     meta: {
       floors,
       preferredMinTrades: PREFERRED_MIN_TRADES,
+      provider: useTwelve ? "twelve_data" : "yahoo",
+      twelveDataLimits: useTwelve
+        ? {
+            creditsPerMin: TWELVE_DATA_FREE_CREDITS_PER_MIN,
+            creditsPerDay: TWELVE_DATA_FREE_CREDITS_PER_DAY,
+            maxOutputsize: TWELVE_DATA_MAX_OUTPUTSIZE,
+          }
+        : null,
       datasets,
       candCount: cands.length,
       deskDefaults: DEFAULT_RULE_SET.rules
@@ -217,16 +352,23 @@ async function main() {
   const outDir =
     "/cursor/stores/bc-b99bd4a7-78ba-47d8-af65-455fa72ffa8c/internal/yt-backtests";
   mkdirSync(outDir, { recursive: true });
-  const path = `${outDir}/pass13-highwr-profit-1m.json`;
+  const path = `${outDir}/pass16-twelve-data-1m.json`;
   writeFileSync(path, JSON.stringify(summary, null, 2));
 
-  console.log(JSON.stringify({
-    datasets,
-    activeKeeps,
-    activeDrops,
-    keepCount: keeps.length,
-    out: path,
-  }, null, 2));
+  console.log(
+    JSON.stringify(
+      {
+        provider: useTwelve ? "twelve_data" : "yahoo",
+        datasets,
+        activeKeeps,
+        activeDrops,
+        keepCount: keeps.length,
+        out: path,
+      },
+      null,
+      2,
+    ),
+  );
 }
 
 main().catch((e) => {

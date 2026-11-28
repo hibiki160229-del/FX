@@ -62,7 +62,7 @@ export type AnalysisRunResult = {
   pair: "USD/JPY";
   interval: string;
   barCount: number;
-  source: "yahoo" | "oanda" | "sample";
+  source: "twelve_data" | "yahoo" | "oanda" | "sample";
   asOf: number;
   floors: ScoreFloors;
   ranked: RankedCandidate[];
