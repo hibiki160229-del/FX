@@ -8,6 +8,7 @@ const LABELS: Record<RuleId, string> = {
   rsi_reversal: "RSI反転",
   macd_hist_flip: "MACDヒストグラム転換",
   bb_touch: "ボリンジャー接触",
+  ma_bounce: "MA押し目バウンス",
 };
 
 function cand(
@@ -95,6 +96,24 @@ export function seedCandidates(): RuleCandidate[] {
       cand("bb_touch", { period, mult }, "seed", `BB${period}×${mult}`),
     );
   }
+
+  // MA bounce / pullback (YouTube-derived defaults also live in youtube.ts)
+  out.push(
+    cand(
+      "ma_bounce",
+      { period: 50, kind: "ema", trendPeriod: 200 },
+      "seed",
+      "EMA50押し＋200トレンド",
+    ),
+    cand(
+      "ma_bounce",
+      { period: 20, kind: "sma", trendPeriod: 200 },
+      "seed",
+      "SMA20押し＋200トレンド",
+    ),
+    cand("ma_bounce", { period: 20, kind: "sma" }, "seed", "SMA20バウンス"),
+    cand("ma_bounce", { period: 200, kind: "sma" }, "seed", "SMA200バウンス"),
+  );
 
   return dedupe(out);
 }

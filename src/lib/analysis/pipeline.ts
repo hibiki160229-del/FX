@@ -17,6 +17,7 @@ import {
   type RuleCandidate,
   type ScoreFloors,
 } from "./types";
+import { youtubeCandidates } from "./youtube";
 
 export type PipelineOptions = {
   range?: string;
@@ -25,6 +26,7 @@ export type PipelineOptions = {
   /** Cap search grid size for latency. */
   maxCandidates?: number;
   includeWeb?: boolean;
+  includeYoutube?: boolean;
 };
 
 function buildSuggestedRuleSet(ranked: RankedCandidate[]): SignalRuleSet {
@@ -75,8 +77,9 @@ export async function runAutoAnalysis(
   const range = opts.range ?? "3mo";
   const interval = opts.interval ?? "1h";
   const floors = opts.floors ?? DEFAULT_SCORE_FLOORS;
-  const maxCandidates = opts.maxCandidates ?? 120;
+  const maxCandidates = opts.maxCandidates ?? 160;
   const includeWeb = opts.includeWeb ?? true;
+  const includeYoutube = opts.includeYoutube ?? true;
 
   const ohlcv = await fetchUsdJpyOhlcv(range, interval);
 
@@ -90,10 +93,13 @@ export async function runAutoAnalysis(
     web = await extractWebCandidates();
   }
 
+  const yt = includeYoutube ? youtubeCandidates() : [];
+
   const pool = dedupe([
     ...seedCandidates(),
     ...searchCandidates(),
     ...web.candidates,
+    ...yt,
   ]).slice(0, maxCandidates);
 
   const ranked: RankedCandidate[] = pool.map((c) => {
@@ -113,6 +119,11 @@ export async function runAutoAnalysis(
     return b.score - a.score;
   });
 
+  const ytNote =
+    yt.length > 0
+      ? `YouTube学習チャンネル由来 ${yt.length} 候補をシード投入。`
+      : "YouTube候補は無効。";
+
   return {
     pair: "USD/JPY",
     interval,
@@ -124,8 +135,9 @@ export async function runAutoAnalysis(
     extraction: {
       attempted: web.attempted,
       webHits: web.webHits,
-      youtube: "skipped",
-      noteJa: web.noteJa,
+      youtube: yt.length > 0 ? "seeded" : "skipped",
+      youtubeCandidates: yt.length,
+      noteJa: `${web.noteJa} ${ytNote}`.trim(),
     },
     suggestedRuleSet: buildSuggestedRuleSet(ranked),
   };

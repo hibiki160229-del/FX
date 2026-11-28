@@ -12,6 +12,7 @@ export { runAutoAnalysis } from "./pipeline";
 export { checkFloors, compositeScore } from "./score";
 export { searchCandidates } from "./search";
 export { seedCandidates } from "./seeds";
+export { youtubeCandidates } from "./youtube";
 export type { AnalysisLoopSnapshot, LoopRunState } from "./server-store";
 export {
   loadLastAnalysis,

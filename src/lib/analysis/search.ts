@@ -75,5 +75,22 @@ export function searchCandidates(): RuleCandidate[] {
     }
   }
 
+  for (const period of [10, 20, 50, 200]) {
+    for (const kind of ["sma", "ema"] as const) {
+      out.push(
+        cand("ma_bounce", { period, kind }, `探索 ${kind.toUpperCase()}${period}バウンス`),
+      );
+      if (period < 200) {
+        out.push(
+          cand(
+            "ma_bounce",
+            { period, kind, trendPeriod: 200 },
+            `探索 ${kind.toUpperCase()}${period}+200トレンド`,
+          ),
+        );
+      }
+    }
+  }
+
   return dedupe(out);
 }
