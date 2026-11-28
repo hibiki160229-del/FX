@@ -129,6 +129,12 @@ export function seedCandidates(): RuleCandidate[] {
     cand("swing_break", { lookback: 55 }, "seed", "Donchian55"),
     cand(
       "consol_break",
+      { window: 8, maxRangeAtr: 1.5, atrPeriod: 14 },
+      "seed",
+      "停滞8本ATR1.5",
+    ),
+    cand(
+      "consol_break",
       { window: 5, maxRangeAtr: 1.2, atrPeriod: 14 },
       "seed",
       "停滞5本ブレイク",
