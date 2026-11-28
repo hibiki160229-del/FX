@@ -1,6 +1,7 @@
 import { fetchUsdJpyOhlcv } from "@/lib/data/fetch-ohlcv";
 import {
   DEFAULT_RULE_SET,
+  getRuleSetForInterval,
   type RuleDefinition,
   type RuleId,
   type SignalRuleSet,
@@ -29,7 +30,11 @@ export type PipelineOptions = {
   includeYoutube?: boolean;
 };
 
-function buildSuggestedRuleSet(ranked: RankedCandidate[]): SignalRuleSet {
+function buildSuggestedRuleSet(
+  ranked: RankedCandidate[],
+  interval: string,
+): SignalRuleSet {
+  const base = getRuleSetForInterval(interval);
   const bestById = new Map<RuleId, RankedCandidate>();
   for (const r of ranked) {
     if (!r.passed) continue;
@@ -37,14 +42,14 @@ function buildSuggestedRuleSet(ranked: RankedCandidate[]): SignalRuleSet {
     if (!prev || r.score > prev.score) bestById.set(r.ruleId, r);
   }
 
-  const rules: RuleDefinition[] = DEFAULT_RULE_SET.rules.map((base) => {
-    const win = bestById.get(base.id);
+  const rules: RuleDefinition[] = base.rules.map((b) => {
+    const win = bestById.get(b.id);
     if (!win) {
-      return { ...base, enabled: false };
+      return { ...b, enabled: false };
     }
     return {
-      id: base.id,
-      labelJa: base.labelJa,
+      id: b.id,
+      labelJa: b.labelJa,
       enabled: true,
       params: win.params as never,
     } as RuleDefinition;
@@ -56,14 +61,14 @@ function buildSuggestedRuleSet(ranked: RankedCandidate[]): SignalRuleSet {
     return {
       version: 1,
       pair: "USD/JPY",
-      rules: DEFAULT_RULE_SET.rules.map((base) =>
-        base.id === top.ruleId
+      rules: base.rules.map((b) =>
+        b.id === top.ruleId
           ? ({
-              ...base,
+              ...b,
               enabled: true,
               params: top.params as never,
             } as RuleDefinition)
-          : { ...base, enabled: false },
+          : { ...b, enabled: false },
       ),
     };
   }
@@ -139,6 +144,6 @@ export async function runAutoAnalysis(
       youtubeCandidates: yt.length,
       noteJa: `${web.noteJa} ${ytNote}`.trim(),
     },
-    suggestedRuleSet: buildSuggestedRuleSet(ranked),
+    suggestedRuleSet: buildSuggestedRuleSet(ranked, interval),
   };
 }

@@ -57,9 +57,11 @@ export function seedCandidates(): RuleCandidate[] {
     );
   }
 
-  // RSI thresholds
+  // RSI thresholds (incl. TF-policy H1 winner RSI2 30/70)
   for (const [period, oversold, overbought] of [
+    [2, 30, 70],
     [7, 25, 75],
+    [9, 20, 80],
     [14, 20, 80],
     [14, 30, 70],
     [21, 30, 70],
