@@ -99,7 +99,7 @@ export type SignalRuleSet = {
 /**
  * Live H1 desk defaults after high-WR + positive-return prune (pass13).
  * Keep only: WR≥50% AND totalReturn>0 (trades≥4, MDD≤25%). Prefer n≥20.
- * BT window H1=1y Yahoo. Desk keeps: BB×2.5, FB12, RSI14 30/70 (web/IG).
+ * BT window H1=1y (Twelve Data or Yahoo). Desk keeps: BB×2.5, FB12, RSI14 30/70 (web/IG).
  * DROPPED: RSI2 (loss on 1y), swing100, consol8, ma_cross/inside/squeeze.
  */
 export const DEFAULT_RULE_SET: SignalRuleSet = {
@@ -202,12 +202,13 @@ function overlayRuleSet(
 
 /**
  * Per-interval packs — only high-WR + positive-return keeps enabled.
- * Yahoo max windows used in BT: 1m≈7–8d, 5m/15m/30m=60d, 1h/4h≈1y, 1d=1y.
+ * BT windows: Twelve Data prefers ~1y (1m via paging); Yahoo fallback
+ * 1m≈7–8d, 5m/15m/30m=60d, 1h/4h≈1y, 1d=1y.
  */
 export const RULE_SETS_BY_INTERVAL: Record<string, SignalRuleSet> = {
   "1h": DEFAULT_RULE_SET,
   "60m": DEFAULT_RULE_SET,
-  // 1m: Yahoo ~7d. BB×1 + FB50 + RSI14 (inherits desk); consol6 DROPPED.
+  // 1m: Twelve Data ~1y when keyed; Yahoo ~7d. BB×1 + FB50 + RSI14; consol6 DROP.
   "1m": overlayRuleSet(DEFAULT_RULE_SET, {
     bb_touch: { enabled: true, params: { period: 20, mult: 1 } },
     false_break: { enabled: true, params: { lookback: 50 } },

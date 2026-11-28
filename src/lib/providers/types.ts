@@ -1,6 +1,6 @@
 import type { OhlcvBar } from "@/lib/types";
 
-export type PriceSourceId = "oanda" | "yahoo" | "sample";
+export type PriceSourceId = "twelve_data" | "oanda" | "yahoo" | "sample";
 
 export type LiveQuote = {
   pair: "USD/JPY";
@@ -21,7 +21,7 @@ export type OhlcvResult = {
 };
 
 export type ProviderStatus = {
-  /** Default preferred feed (yahoo). OANDA remains optional when secrets exist. */
+  /** Preferred feed: twelve_data when keyed, else yahoo. OANDA optional. */
   preferred: PriceSourceId;
   oandaConfigured: boolean;
   oandaReachable: boolean | null;

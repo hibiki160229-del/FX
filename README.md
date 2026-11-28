@@ -4,7 +4,7 @@ USD/JPY テクニカル分析＆ペーパー取引の Web アプリ（v1）。
 
 ## 機能
 
-- USD/JPY ローソク足チャート（Yahoo Finance、失敗時は任意の OANDA デモ足 → サンプル）
+- USD/JPY ローソク足チャート（**Twelve Data** 優先・`TWELVE_DATA_API_KEY` 時／なければ **Yahoo** → 任意 OANDA → サンプル）
 - **準リアルタイム** — Yahoo Finance の高頻度価格ポーリング（APIキー不要）をシグナル／エントリー（買い・売り・利確・損切）に反映。ツールバーに「Yahoo ライブ／ライブ／遅延」とアクティブソース表示
 - 指標トグル: MA / EMA / RSI / MACD / Bollinger
 - **常時自動分析** — 約 **5分** 周期で時間足 OHLCV 取得→バックテスト→通過ルール自動採用
@@ -18,7 +18,19 @@ USD/JPY テクニカル分析＆ペーパー取引の Web アプリ（v1）。
 
 - 取引時間中は概ね1–5秒程度の鮮度
 - bid/ask は mid から小さな半スプレッドを推定（チャート・アラート用）
-- OHLCV 骨格は従来どおり Yahoo 1分足（約30秒ポーリング）
+- OHLCV 骨格: Twelve Data（キーあり）または Yahoo 1分足（約30秒ポーリング）
+
+## Twelve Data（任意・推奨・長い 1m 履歴）
+
+`TWELVE_DATA_API_KEY` があるとき OHLCV は Twelve Data `/time_series` を優先します。`outputsize` ≤ 5000 のため、長い履歴は `start_date` / `end_date` ウィンドウでページングします（1m はクレジットが許す範囲で **約1年** を目標）。
+
+| 項目 | 内容 |
+|------|------|
+| `TWELVE_DATA_API_KEY` | Twelve Data API キー（任意・推奨） |
+| Free Basic レート | **8 credits/分**・**800/日**（`/time_series` = 1 credit/symbol） |
+| フォールバック | キーなし／失敗時は **Yahoo**（1m ≈ 7日） |
+
+Cursor の App Secrets に同名を bind してから republish。**チャットにキーを貼らないでください。**
 
 ## OANDA デモ（任意・ソフト非推奨）
 
@@ -39,8 +51,8 @@ Cursor クライアントまたは [Secrets 設定](https://cursor.com/dashboard
 |------|------|
 | 優先配信 | **Yahoo Finance** 価格ポーリング（SSE 経由・約2秒） |
 | 任意追加 | OANDA Practice stream / REST / S5（Secrets がある場合のみ） |
-| OHLCV 骨格 | Yahoo `5d` / `1m`（約30秒、キャッシュ TTL 15秒） |
-| フォールバック | Yahoo →（任意）OANDA 足 → サンプル |
+| OHLCV 骨格 | Twelve Data（キー時）または Yahoo `5d` / `1m`（約30秒、キャッシュ TTL 15秒） |
+| フォールバック | Twelve Data → Yahoo →（任意）OANDA 足 → サンプル |
 | ルール発見 | 約5分周期・`3mo` / `1h` |
 
 ## API
@@ -55,7 +67,7 @@ Cursor クライアントまたは [Secrets 設定](https://cursor.com/dashboard
 | `POST /api/analysis/tick` | 期限到来時実行（keepalive） |
 | `POST /api/analyze` | 手動再実行 |
 
-プロバイダ抽象: `src/lib/providers/`（Yahoo / 任意 OANDA / sample）。デスク定数: `src/lib/realtime/`。
+プロバイダ抽象: `src/lib/providers/`（Twelve Data / Yahoo / 任意 OANDA / sample）。デスク定数: `src/lib/realtime/`。
 
 ## 起動
 

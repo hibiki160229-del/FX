@@ -1,10 +1,14 @@
 import type { OhlcvBar } from "@/lib/types";
 import { fetchOandaOhlcv, isOandaConfigured } from "@/lib/providers/oanda";
+import {
+  fetchTwelveDataOhlcv,
+  isTwelveDataConfigured,
+} from "@/lib/providers/twelve-data";
 import type { PriceSourceId } from "@/lib/providers/types";
 import { generateMockOhlcv } from "./mock-ohlcv";
 
 /**
- * In-memory OHLCV cache TTL — guards Yahoo / OANDA / analyze / page fan-out.
+ * In-memory OHLCV cache TTL — guards Twelve Data / Yahoo / OANDA / analyze fan-out.
  * Aligned with near-realtime desk poll (15–60s).
  */
 export const OHLCV_CACHE_TTL_MS = 15 * 1000;
@@ -49,58 +53,75 @@ function cacheKey(range: string, interval: string) {
   return `${range}|${interval}`;
 }
 
+async function fetchYahooOhlcv(
+  range: string,
+  interval: string,
+): Promise<OhlcvPayload> {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/USDJPY=X?interval=${encodeURIComponent(interval)}&range=${encodeURIComponent(range)}`;
+  const res = await fetch(url, {
+    headers: { "User-Agent": "EnmyakuFX/1.0" },
+    next: { revalidate: 15 },
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`yahoo ${res.status}`);
+  const json = (await res.json()) as YahooChart;
+  const result = json.chart?.result?.[0];
+  const ts = result?.timestamp;
+  const q = result?.indicators?.quote?.[0];
+  if (!ts || !q?.close) throw new Error("empty yahoo payload");
+
+  const bars: OhlcvBar[] = [];
+  for (let i = 0; i < ts.length; i++) {
+    const open = q.open?.[i];
+    const high = q.high?.[i];
+    const low = q.low?.[i];
+    const close = q.close?.[i];
+    if (
+      open == null ||
+      high == null ||
+      low == null ||
+      close == null ||
+      !Number.isFinite(open) ||
+      !Number.isFinite(close)
+    ) {
+      continue;
+    }
+    bars.push({
+      time: ts[i],
+      open,
+      high,
+      low,
+      close,
+      volume: q.volume?.[i] ?? 0,
+    });
+  }
+  if (bars.length < 40) throw new Error("too few bars");
+
+  return {
+    bars,
+    source: "yahoo",
+    pair: "USD/JPY",
+    interval,
+    asOf: Date.now(),
+  };
+}
+
 async function fetchUsdJpyOhlcvUncached(
   range: string,
   interval: string,
 ): Promise<OhlcvPayload> {
-  try {
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/USDJPY=X?interval=${encodeURIComponent(interval)}&range=${encodeURIComponent(range)}`;
-    const res = await fetch(url, {
-      headers: { "User-Agent": "EnmyakuFX/1.0" },
-      next: { revalidate: 15 },
-      cache: "no-store",
-    });
-    if (!res.ok) throw new Error(`yahoo ${res.status}`);
-    const json = (await res.json()) as YahooChart;
-    const result = json.chart?.result?.[0];
-    const ts = result?.timestamp;
-    const q = result?.indicators?.quote?.[0];
-    if (!ts || !q?.close) throw new Error("empty yahoo payload");
-
-    const bars: OhlcvBar[] = [];
-    for (let i = 0; i < ts.length; i++) {
-      const open = q.open?.[i];
-      const high = q.high?.[i];
-      const low = q.low?.[i];
-      const close = q.close?.[i];
-      if (
-        open == null ||
-        high == null ||
-        low == null ||
-        close == null ||
-        !Number.isFinite(open) ||
-        !Number.isFinite(close)
-      ) {
-        continue;
-      }
-      bars.push({
-        time: ts[i],
-        open,
-        high,
-        low,
-        close,
-        volume: q.volume?.[i] ?? 0,
-      });
+  // Prefer Twelve Data when keyed (longer 1m history via paging).
+  if (isTwelveDataConfigured()) {
+    try {
+      const td = await fetchTwelveDataOhlcv(range, interval);
+      if (td) return td;
+    } catch {
+      // fall through to Yahoo
     }
-    if (bars.length < 40) throw new Error("too few bars");
+  }
 
-    return {
-      bars,
-      source: "yahoo",
-      pair: "USD/JPY",
-      interval,
-      asOf: Date.now(),
-    };
+  try {
+    return await fetchYahooOhlcv(range, interval);
   } catch {
     // Prefer OANDA practice candles when Yahoo fails and secrets are set.
     if (isOandaConfigured()) {

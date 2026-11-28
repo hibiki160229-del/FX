@@ -64,6 +64,7 @@ function formatUpdatedAt(ms: number) {
 }
 
 function ohlcvSourceLabel(source: OhlcvPayload["source"]) {
+  if (source === "twelve_data") return "Twelve Data 足";
   if (source === "oanda") return "OANDA デモ足";
   if (source === "yahoo") return "Yahoo 足";
   return "サンプルデータ";

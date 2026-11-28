@@ -2,7 +2,8 @@
  * Near-realtime desk defaults.
  * Primary live mark: Yahoo Finance quote poll (zero secrets).
  * Optional: OANDA practice tick stream when secrets are present.
- * Yahoo 1m OHLCV remains the chart backbone.
+ * OHLCV: Twelve Data when TWELVE_DATA_API_KEY is set (longer 1m via paging);
+ * Yahoo remains zero-secret fallback (1m max ≈ 7d).
  */
 
 /** Client chart / signal OHLCV poll while the desk tab is visible. */
@@ -11,7 +12,7 @@ export const DESK_POLL_MS = 30_000; // 30s (within 15–60s)
 /** Pause OHLCV polling when the tab is hidden this long before the next tick. */
 export const DESK_HIDDEN_POLL_MS = 120_000;
 
-/** Live desk candle size / lookback (Yahoo 1m max ≈ 7d). */
+/** Live desk candle size / lookback (Twelve Data can go longer; Yahoo 1m ≈ 7d). */
 export const DESK_OHLCV_RANGE = "5d";
 export const DESK_OHLCV_INTERVAL = "1m";
 
