@@ -168,8 +168,8 @@ export function youtubeCandidates(): RuleCandidate[] {
     ),
   );
 
-  // —— 5. クロユキFX（学習対象に含む） ——
-  // 200SMA傾きで目線固定＋押し目；H1方向一致は単一足では近似
+  // —— 5. クロユキFX（full-watch pass extracts） ——
+  // 200SMA傾きで目線固定＋押し目；スイングブレイク；停滞抜け
   out.push(
     yt(
       "ma_bounce",
@@ -200,6 +200,72 @@ export function youtubeCandidates(): RuleCandidate[] {
       { fast: 50, slow: 200 },
       "クロユキFX",
       "50/200SMA グランビル近似",
+    ),
+    yt(
+      "swing_break",
+      { lookback: 20, trendPeriod: 200, trendKind: "sma" },
+      "クロユキFX",
+      "押し安値/戻り高値ブレイク＋200SMA傾きフィルタ（ZOM9y/gUU56）",
+    ),
+    yt(
+      "swing_break",
+      { lookback: 12, trendPeriod: 200, trendKind: "sma" },
+      "クロユキFX",
+      "短めスイングブレイク＋200SMA（fyWBG スイングハイロー近似）",
+    ),
+    yt(
+      "swing_break",
+      { lookback: 20 },
+      "クロユキFX",
+      "スイングブレイク単体（傾きフィルタなし・対照）",
+    ),
+    yt(
+      "swing_break",
+      { lookback: 55, trendPeriod: 200, trendKind: "sma" },
+      "クロユキFX",
+      "広めスイング（4H相当のH1近似）＋200SMA",
+    ),
+    yt(
+      "consol_break",
+      { window: 5, maxRangeAtr: 1.2, atrPeriod: 14 },
+      "クロユキFX",
+      "停滞≥5本→実体抜け（GPDEm スキャル近似・H1）",
+    ),
+    yt(
+      "consol_break",
+      { window: 7, maxRangeAtr: 1.0, atrPeriod: 14 },
+      "クロユキFX",
+      "停滞7本・よりタイトなレンジ抜け",
+    ),
+    yt(
+      "consol_break",
+      { window: 5, maxRangeAtr: 1.5, atrPeriod: 14 },
+      "クロユキFX",
+      "停滞5本・緩めATR許容",
+    ),
+    yt(
+      "ma_bounce",
+      { period: 200, kind: "sma", trendPeriod: 200 },
+      "クロユキFX",
+      "200SMAタッチ＋傾き（DaHHu 目線必須のバウンス）",
+    ),
+    yt(
+      "ma_bounce",
+      { period: 200, kind: "ema", trendPeriod: 20 },
+      "クロユキFX",
+      "200W近似: H1 20EMA方向＋M1 200EMA付近（H1上で近似）",
+    ),
+    yt(
+      "rsi_reversal",
+      { period: 9, oversold: 30, overbought: 70 },
+      "クロユキFX",
+      "RSI9 トリプル/耳パターン近似（30/70帯）",
+    ),
+    yt(
+      "rsi_reversal",
+      { period: 9, oversold: 20, overbought: 80 },
+      "クロユキFX",
+      "RSI9 深め帯（20/80）",
     ),
   );
 
